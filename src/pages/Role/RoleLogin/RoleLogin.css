@@ -192,7 +192,7 @@
   border-radius: 30px;
   padding: 2.5rem;
   width: 100%;
-  max-width: 450px;
+  max-width: 550px;
   box-shadow: var(--card-shadow-hover);
   border: 1px solid var(--border-color);
   animation: roleSlideUp 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -293,7 +293,7 @@
 
 .role-input-wrapper input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  padding: 20px 1rem 20px 3rem;
   border: 2px solid var(--border-color);
   border-radius: 16px;
   font-size: 1rem;
@@ -617,5 +617,329 @@
 
   .role-security-badge {
     color: var(--secondary-light);
+  }
+}
+/* ==================== OTP Section Styles ==================== */
+
+/* Email Display */
+.role-email-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background-color: #f0f5ff;
+  border: 2px solid var(--primary-color);
+  border-radius: 16px;
+  margin-bottom: 1rem;
+  animation: roleSlideDown 0.5s ease;
+}
+
+@keyframes roleSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.role-email-display svg {
+  color: var(--primary-color);
+  font-size: 1.25rem;
+}
+
+.role-email-display span {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.role-change-email {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: var(--white);
+  border: 1px solid var(--primary-color);
+}
+
+.role-change-email:hover {
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+/* OTP Container */
+.role-otp-container {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.role-otp-input {
+  width: 60px;
+  height: 70px;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  background-color: var(--white);
+  transition: all 0.3s ease;
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.role-otp-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
+}
+
+.role-otp-input:not(:placeholder-shown) {
+  border-color: var(--primary-color);
+  background-color: #f5f9ff;
+}
+
+.role-otp-input:disabled {
+  background-color: var(--light-gray);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* OTP Timer */
+.role-otp-timer {
+  text-align: center;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  animation: roleFadeIn 0.5s ease;
+}
+
+@keyframes roleFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.role-otp-timer p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.role-otp-timer svg {
+  color: var(--primary-color);
+}
+
+.role-resend-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: var(--white);
+  border: 1px solid var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-resend-btn:hover:not(:disabled) {
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+.role-resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Back Button */
+.role-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  background: none;
+  color: var(--text-muted);
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.role-back-btn:hover {
+  background-color: var(--light-gray);
+  color: var(--text-primary);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.role-back-btn svg {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.role-back-btn:hover svg {
+  transform: translateX(-5px);
+}
+
+/* OTP Error Animation */
+@keyframes roleShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.role-otp-error {
+  animation: roleShake 0.5s ease;
+}
+
+/* Responsive OTP */
+@media (max-width: 768px) {
+  .role-otp-input {
+    width: 50px;
+    height: 60px;
+    font-size: 1.75rem;
+  }
+  
+  .role-otp-container {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .role-otp-input {
+    width: 40px;
+    height: 50px;
+    font-size: 1.5rem;
+    border-radius: 12px;
+  }
+  
+  .role-otp-container {
+    gap: 0.35rem;
+  }
+  
+  .role-email-display {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .role-email-display span {
+    width: 100%;
+    font-size: 0.9rem;
+  }
+  
+  .role-change-email {
+    width: 100%;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .role-email-display {
+    background-color: #1e293b;
+    border-color: var(--primary-color);
+  }
+  
+  .role-email-display span {
+    color: var(--white);
+  }
+  
+  .role-change-email {
+    background-color: var(--secondary-dark);
+    color: var(--primary-light);
+    border-color: var(--primary-color);
+  }
+  
+  .role-change-email:hover {
+    background-color: var(--primary-color);
+    color: var(--white);
+  }
+  
+  .role-otp-input {
+    background-color: var(--secondary-dark);
+    border-color: var(--border-dark);
+    color: var(--white);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .role-otp-input:focus {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
+  }
+  
+  .role-otp-input:not(:placeholder-shown) {
+    border-color: var(--primary-light);
+    background-color: #1e293b;
+  }
+  
+  .role-otp-timer {
+    background-color: #1e293b;
+    border-color: var(--border-dark);
+  }
+  
+  .role-otp-timer p {
+    color: var(--secondary-light);
+  }
+  
+  .role-resend-btn {
+    background-color: var(--secondary-dark);
+    color: var(--primary-light);
+    border-color: var(--primary-color);
+  }
+  
+  .role-resend-btn:hover:not(:disabled) {
+    background-color: var(--primary-color);
+    color: var(--white);
+  }
+  
+  .role-back-btn {
+    background-color: var(--secondary-dark);
+    color: var(--secondary-light);
+    border-color: var(--border-dark);
+  }
+  
+  .role-back-btn:hover {
+    background-color: #1e293b;
+    color: var(--white);
+    border-color: var(--primary-light);
   }
 }

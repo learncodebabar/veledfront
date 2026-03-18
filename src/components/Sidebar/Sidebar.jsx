@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../../api/axios';
 import './Sidebar.css';
 
@@ -11,16 +11,30 @@ import {
   FiClock, FiStar, FiBell, FiShield, FiDatabase, FiServer,
   FiDollarSign, FiShoppingCart, FiUserPlus, FiUserCheck,
   FiUserX, FiUserMinus, FiCreditCard, FiBriefcase,
-  FiMenu, FiX, FiTool, FiAward
+  FiMenu, FiX, FiTool, FiAward, FiEye, FiPackage, FiFilePlus
 } from 'react-icons/fi';
 
-import { FaUserCircle, FaWrench, FaMoneyBillWave, FaUserTag } from 'react-icons/fa';
+import { FaUserCircle, FaWrench, FaMoneyBillWave, FaUserTag, FaFileInvoice } from 'react-icons/fa';
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const [adminData, setAdminData] = useState({
-    name: 'Admin',
-    email: 'admin@example.com'
+  const location = useLocation();
+  
+  // ✅ Get user info from localStorage
+  const adminToken = localStorage.getItem('adminToken');
+  const roleToken = localStorage.getItem('roleToken');
+  const adminUser = JSON.parse(localStorage.getItem('user') || 'null');
+  const roleUser = JSON.parse(localStorage.getItem('roleUser') || 'null');
+  
+  // ✅ Determine user type
+  const userType = adminToken ? 'admin' : (roleToken ? 'role' : null);
+  const user = adminUser || roleUser;
+  const userRole = user?.role || 'admin';
+  
+  const [userData, setUserData] = useState({
+    name: user?.name || (userType === 'admin' ? 'Admin' : 'Role User'),
+    email: user?.email || (userType === 'admin' ? 'admin@example.com' : 'user@example.com'),
+    role: userRole
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -28,41 +42,72 @@ const Sidebar = () => {
   const [activeSubItem, setActiveSubItem] = useState(null);
   const [expandedMenus, setExpandedMenus] = useState(['dashboard']);
 
-  // Fetch admin data on component mount
+  // Fetch user data on component mount
   useEffect(() => {
-    fetchAdminData();
+    fetchUserData();
   }, []);
 
-  // Fetch admin data from API
-  const fetchAdminData = async () => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      if (!token) return;
-
-      const response = await API.get('/admin/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`
+  // Set active menu based on current path
+  useEffect(() => {
+    const path = location.pathname;
+    
+    // Find which menu item matches current path
+    const allMenuItems = [...adminMenuItems, ...roleMenuItems];
+    
+    for (const item of allMenuItems) {
+      if (item.path === path) {
+        setActiveItem(item.id);
+        break;
+      }
+      if (item.subMenu) {
+        for (const subItem of item.subMenu) {
+          if (subItem.path === path) {
+            setActiveItem(item.id);
+            setActiveSubItem(subItem.id);
+            setExpandedMenus(prev => [...prev, item.id]);
+            break;
+          }
         }
-      });
-      
-      const userData = response.data.user;
-      setAdminData({
-        name: userData.name || 'Admin',
-        email: userData.email || 'admin@example.com'
-      });
+      }
+    }
+  }, [location.pathname]);
+
+  // Fetch user data from API
+  const fetchUserData = async () => {
+    try {
+      if (userType === 'admin') {
+        const token = localStorage.getItem('adminToken');
+        if (!token) return;
+
+        const response = await API.get('/admin/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const userData = response.data.user;
+        setUserData({
+          name: userData.name || 'Admin',
+          email: userData.email || 'admin@example.com',
+          role: 'admin'
+        });
+      } else if (userType === 'role') {
+        const token = localStorage.getItem('roleToken');
+        const user = JSON.parse(localStorage.getItem('roleUser') || '{}');
+        
+        setUserData({
+          name: user.name || 'Role User',
+          email: user.email || 'user@example.com',
+          role: user.role || 'manager'
+        });
+      }
     } catch (err) {
-      console.error('Error fetching admin data:', err);
+      console.error('Error fetching user data:', err);
     }
   };
 
   const openSidebar = () => setIsOpen(true);
-  
-  // ✅ FIXED: Only close sidebar when clicking the close button or overlay
   const closeSidebar = () => setIsOpen(false);
 
-  // ✅ FIXED: Handle overlay click - only closes when clicking the overlay itself
   const handleOverlayClick = (e) => {
-    // Only close if the click target is the overlay itself
     if (e.target === e.currentTarget) {
       closeSidebar();
     }
@@ -76,25 +121,48 @@ const Sidebar = () => {
     );
   };
 
-  const menuItems = [
+  // ✅ Admin Menu Items (with Quotation Menu)
+  const adminMenuItems = [
     {
       id: 'dashboard',
       title: 'Dashboard',
       icon: <FiHome />,
       path: '/Admin-Dashboard-overall',
     },
- 
+    {
+      id: 'quotation', // ✅ NEW QUOTATION MENU
+      title: 'Quotation',
+      icon: <FaFileInvoice />,
+      subMenu: [
+        { 
+          id: 'add-material', 
+          title: 'Add Material', 
+          icon: <FiPackage />, 
+          path: '/Admin-Material' 
+        },
+        { 
+          id: 'add-quotation', 
+          title: 'Add Quotation', 
+          icon: <FiFilePlus />, 
+          path: '/QuotationCustomer' 
+        },
+        { 
+          id: 'all-quotations', 
+          title: 'All Quotations', 
+          icon: <FiFileText />, 
+          path: '/all-Quotation' 
+        },
+      ]
+    },
     {
       id: 'customer',
       title: 'Customer',
       icon: <FiUsers />,
       subMenu: [
         { id: 'all-customer', title: 'All Customers', icon: <FiUser />, path: '/admin-all-customer' },
-        { id: 'add-customer', title: 'Add Customers', icon: <FiUserPlus />, path: '/admin-add-customer' },
+        { id: 'add-customer', title: 'Add Customers', icon: <FiUserPlus />, path: '/Admin-Add-customer' },
       ]
     },
-
-    // ========== LABOR SECTION ==========
     {
       id: 'labor',
       title: 'Labor',
@@ -105,8 +173,6 @@ const Sidebar = () => {
         { id: 'labor-attendance', title: 'Labor Attendance', icon: <FiClock />, path: '/Attendance-Page' },
       ]
     },
-
-    // ========== ROLES SECTION ==========
     {
       id: 'roles',
       title: 'Roles',
@@ -115,11 +181,9 @@ const Sidebar = () => {
         { id: 'add-role', title: 'Add Role', icon: <FiUserPlus />, path: '/add-roles' },
       ]
     },
-
     { id: 'expenses', title: 'Expenses', icon: <FiDollarSign />, path: '/admin-expenses' },
+    { id: 'payments', title: 'Payments', icon: <FiCreditCard />, path: '/Admin-Payment' },
     { id: 'all-orders', title: 'All Orders', icon: <FiShoppingCart />, path: '/All-Orders' },
-
-    // ========== SETTINGS SECTION ==========
     {
       id: 'settings',
       title: 'Settings',
@@ -132,37 +196,130 @@ const Sidebar = () => {
     }
   ];
 
+  // ✅ Role Menu Items (with Quotation Menu for Role users)
+  const roleMenuItems = [
+    {
+      id: 'dashboard',
+      title: 'Dashboard',
+      icon: <FiHome />,
+      path: '/Role-dashboard',
+    },
+    {
+      id: 'quotation', // ✅ NEW QUOTATION MENU for Role
+      title: 'Quotation',
+      icon: <FaFileInvoice />,
+      subMenu: [
+        { 
+          id: 'add-material', 
+          title: 'Add Material', 
+          icon: <FiPackage />, 
+          path: '/role-materials' 
+        },
+        { 
+          id: 'add-quotation', 
+          title: 'Add Quotation', 
+          icon: <FiFilePlus />, 
+          path: '/role-add-quotation' 
+        },
+        { 
+          id: 'all-quotations', 
+          title: 'All Quotations', 
+          icon: <FiFileText />, 
+          path: '/role-quotations' 
+        },
+      ]
+    },
+    {
+      id: 'customer',
+      title: 'Customer',
+      icon: <FiUsers />,
+      subMenu: [
+        { id: 'all-customer', title: 'All Customers', icon: <FiUser />, path: '/role-customers' },
+        { id: 'add-customer', title: 'Add Customers', icon: <FiUserPlus />, path: '/Role-Add-Customer' },
+      ]
+    },
+    {
+      id: 'labor',
+      title: 'Labor',
+      icon: <FiBriefcase />,
+      subMenu: [
+        { id: 'all-labor', title: 'All Labor', icon: <FiUsers />, path: '/role-labor' },
+        { id: 'add-labor', title: 'Add Labor', icon: <FiUserPlus />, path: '/role-add-labor' },
+        { id: 'labor-attendance', title: 'Labor Attendance', icon: <FiClock />, path: '/role-attendance' },
+      ]
+    },
+    { id: 'all-orders', title: 'All Orders', icon: <FiShoppingCart />, path: '/role-orders' },
+    // Role ke liye limited settings
+    {
+      id: 'settings',
+      title: 'Settings',
+      icon: <FiSettings />,
+      subMenu: [
+        { id: 'profile', title: 'Profile', icon: <FiUser />, path: '/role-profile' },
+      ]
+    }
+  ];
+
+  // Select menu based on user type
+  const menuItems = userType === 'admin' ? adminMenuItems : roleMenuItems;
+
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    navigate('/');
+    if (userType === 'admin') {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('user');
+      navigate('/');
+    } else {
+      localStorage.removeItem('roleToken');
+      localStorage.removeItem('roleUser');
+      navigate('/roles-login');
+    }
   };
 
-  // ✅ FIXED: Handle menu item click without closing sidebar unexpectedly
   const handleMenuItemClick = (item) => {
     setActiveItem(item.id);
     if (item.path) navigate(item.path);
     if (item.subMenu) toggleSubMenu(item.id);
-    // Don't close sidebar here - let user close manually
   };
 
-  // ✅ FIXED: Handle submenu item click without closing sidebar unexpectedly
   const handleSubMenuItemClick = (subItem) => {
     setActiveSubItem(subItem.id);
     if (subItem.path) navigate(subItem.path);
-    // Don't close sidebar here - let user close manually
   };
+
+  // Get user display info
+  const getUserDisplay = () => {
+    if (userType === 'admin') {
+      return {
+        name: userData.name,
+        email: userData.email,
+        badge: '👑 Admin',
+        badgeColor: '#3b82f6'
+      };
+    } else {
+      return {
+        name: userData.name,
+        email: userData.email,
+        badge: `👤 ${userRole}`,
+        badgeColor: userRole === 'manager' ? '#8b5cf6' : '#10b981'
+      };
+    }
+  };
+
+  const userDisplay = getUserDisplay();
 
   return (
     <>
-      {/* 🔹 Mobile Navbar */}
+      {/* Mobile Navbar */}
       <div className="mobile-navbar">
-        <div className="mobile-logo">Admin Panel</div>
+        <div className="mobile-logo">
+          {userType === 'admin' ? 'Admin Panel' : 'Role Panel'}
+        </div>
         <div className="mobile-menu-btn" onClick={openSidebar}>
           <FiMenu size={24} />
         </div>
       </div>
 
-      {/* 🔹 Overlay - FIXED: Only closes when clicking overlay itself */}
+      {/* Overlay */}
       {isOpen && (
         <div 
           className="sidebar-overlay" 
@@ -170,12 +327,12 @@ const Sidebar = () => {
         ></div>
       )}
 
-      {/* 🔹 Sidebar - FIXED: Clicking inside sidebar does NOT close it */}
+      {/* Sidebar */}
       <div 
         className={`admin-sidebar ${isOpen ? 'show' : ''}`}
-        onClick={(e) => e.stopPropagation()} // Prevent clicks inside sidebar from propagating
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* 🔹 Close Button (Mobile) - Only this closes the sidebar */}
+        {/* Close Button */}
         <div className="mobile-close-wrapper">
           <FiX 
             size={24} 
@@ -184,21 +341,23 @@ const Sidebar = () => {
           />
         </div>
 
-        {/* 🔹 Admin Profile - with dynamic data */}
+        {/* User Profile with Role Badge */}
         <div className="user-profile">
           <div className="user-avatar">
             <FaUserCircle />
           </div>
           <div className="user-info">
-            <span className="user-name">{adminData.name}</span>
-            <span className="user-email">{adminData.email}</span>
+            <span className="user-name">{userDisplay.name}</span>
+            <span className="user-email">{userDisplay.email}</span>
           </div>
         </div>
 
         {/* Main Menu */}
         <div className="sidebar-nav">
           <div className="nav-section">
-            <h3 className="nav-section-title">MAIN MENU</h3>
+            <h3 className="nav-section-title">
+              {userType === 'admin' ? 'ADMIN MENU' : 'ROLE MENU'}
+            </h3>
 
             <ul className="nav-list">
               {menuItems.map(item => (

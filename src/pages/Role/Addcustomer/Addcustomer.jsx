@@ -1,16 +1,21 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createCustomer, updateCustomer, getCustomerById } from "../../../api/customerApi";
-import { createJob, getCustomerJobs, updateJob, fetchJobsByCustomer } from "../../../api/jobApi";
+import { createJob, updateJob, fetchJobsByCustomer } from "../../../api/jobApi";
 import { getProfile } from "../../../api/profileApi";
 import Sidebar from "../../../components/Sidebar/Sidebar";
 import { FiCheckCircle, FiPrinter, FiX, FiPackage, FiDollarSign, FiShoppingBag } from "react-icons/fi";
 import { BsShop, BsTelephone, BsGeoAlt } from "react-icons/bs";
-import "./AddCustomer.css";
+// import "./AddCustomer.css"; // RoleAddCustomer ke liye alag CSS ho sakti hai
 
-export default function AddCustomer() {
+export default function RoleAddcustomer() {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Get actual token from localStorage
+  const [token, setToken] = useState(localStorage.getItem('roleToken'));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('roleUser') || '{}'));
+  const [userRole, setUserRole] = useState(user.role || 'manager');
   
   // CUSTOMER
   const [customer, setCustomer] = useState({ name: "", phone: "", address: "" });
@@ -26,45 +31,45 @@ export default function AddCustomer() {
   // BUSINESS PROFILE
   const [businessProfile, setBusinessProfile] = useState(null);
 
-  // ESTIMATED AMOUNTS (Low, Medium, High)
+  // ESTIMATED AMOUNTS
   const [estimatedAmounts, setEstimatedAmounts] = useState({
     low: "",
     medium: "",
     high: ""
   });
 
-  // WORK ITEMS & MATERIALS COMBINED
+  // WORK ITEMS & MATERIALS
   const [workName, setWorkName] = useState("");
   const [workQty, setWorkQty] = useState(1);
   
-  // MATERIALS (Expenses) for current work
+  // MATERIALS for current work
   const [currentWorkMaterials, setCurrentWorkMaterials] = useState([]);
   const [matName, setMatName] = useState("");
   const [matQty, setMatQty] = useState(1);
   const [matRate, setMatRate] = useState(0);
 
-  // All combined items for display
+  // All combined items
   const [allItems, setAllItems] = useState([]);
 
-  // Saved Bills from Backend
+  // Saved Bills
   const [savedBills, setSavedBills] = useState([]);
   const [loadingBills, setLoadingBills] = useState(false);
 
-  // Edit mode states for items
+  // Edit mode states
   const [editingItemIndex, setEditingItemIndex] = useState(null);
   const [editingExpenseIndex, setEditingExpenseIndex] = useState(null);
   const [editingWorkName, setEditingWorkName] = useState("");
   const [editingWorkQty, setEditingWorkQty] = useState(1);
   const [editingExpense, setEditingExpense] = useState({ name: "", qty: 1, rate: 0, total: 0 });
   
-  // Add expense mode in edit
+  // Add expense in edit mode
   const [addingExpenseInEdit, setAddingExpenseInEdit] = useState(false);
   const [newExpenseInEdit, setNewExpenseInEdit] = useState({ name: "", qty: 1, rate: 0 });
 
   // Toast state
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
-  // Success Overlay state
+  // Success Overlay
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [savedBillData, setSavedBillData] = useState(null);
 
@@ -72,15 +77,50 @@ export default function AddCustomer() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingBill, setSavingBill] = useState(false);
 
-  // Check if we're in edit mode on component mount
+  // Check authentication on mount
   useEffect(() => {
+    const currentToken = localStorage.getItem('roleToken');
+    const currentUser = JSON.parse(localStorage.getItem('roleUser') || '{}');
+    
+    console.log('🔐 Checking authentication...');
+    console.log('Token exists:', currentToken ? '✅ Yes' : '❌ No');
+    
+    if (!currentToken) {
+      showToast('Please login first', 'error');
+      navigate('/login');
+      return;
+    }
+    
+    // Decode token to check expiry
+    try {
+      const base64Url = currentToken.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const decoded = JSON.parse(atob(base64));
+      
+      console.log('Decoded token:', decoded);
+      console.log('Token type:', decoded.type);
+      console.log('Token expiry:', new Date(decoded.exp * 1000).toLocaleString());
+      
+      // Check if token is expired
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp < now) {
+        showToast('Session expired. Please login again', 'error');
+        localStorage.removeItem('roleToken');
+        localStorage.removeItem('roleUser');
+        navigate('/login');
+        return;
+      }
+    } catch (e) {
+      console.error('Error decoding token:', e);
+    }
+    
+    setToken(currentToken);
+    setUser(currentUser);
+    setUserRole(currentUser.role || 'manager');
+    
     checkEditMode();
-  }, [location.pathname, location.state]);
-
-  // Load business profile on mount
-  useEffect(() => {
     loadBusinessProfile();
-  }, []);
+  }, [location.pathname, location.state]);
 
   // Load saved bills when customer is saved
   useEffect(() => {
@@ -89,23 +129,17 @@ export default function AddCustomer() {
     }
   }, [customerId]);
 
-  // Recalculate expenseTotal for all items whenever allItems changes
+  // Recalculate totals
   useEffect(() => {
     if (allItems.length > 0) {
       const updatedItems = allItems.map(item => {
-        // Calculate expenseTotal for each work
         const expenseTotal = item.materials?.reduce((sum, mat) => {
-          const materialTotal = (parseFloat(mat.qty) || 0) * (parseFloat(mat.rate) || 0);
-          return sum + materialTotal;
+          return sum + ((parseFloat(mat.qty) || 0) * (parseFloat(mat.rate) || 0));
         }, 0) || 0;
         
-        return {
-          ...item,
-          expenseTotal: expenseTotal
-        };
+        return { ...item, expenseTotal };
       });
       
-      // Only update if values have changed to avoid infinite loop
       const hasChanged = updatedItems.some((item, index) => 
         item.expenseTotal !== allItems[index].expenseTotal
       );
@@ -116,34 +150,31 @@ export default function AddCustomer() {
     }
   }, [allItems.map(item => JSON.stringify(item.materials)).join(',')]);
 
-  // Check if we're in edit mode and load customer data with all jobs
+  // Get redirect path based on role
+  const getRedirectPath = () => {
+    const currentUser = JSON.parse(localStorage.getItem('roleUser') || '{}');
+    return currentUser.role === 'admin' ? '/admin-all-customer' : '/admin-all-customer';
+  };
+
+  // Check edit mode
   const checkEditMode = async () => {
-    console.log("Current path:", location.pathname);
-    console.log("Location state:", location.state);
-    
     const currentPath = location.pathname;
+    console.log("Current path:", currentPath);
     
-    // Check if we're on the add-customer page
-    if (currentPath === '/add-customer' || currentPath.includes('admin-add-customer') || currentPath.endsWith('add-customer')) {
-      console.log("On add customer page - not edit mode");
+    if (currentPath === '/Role-Add-Customer' || currentPath === '/role-add-customer') {
+      console.log("On Role Add Customer page - not edit mode");
       setIsEditMode(false);
-      setCustomer({ name: "", phone: "", address: "" });
-      setCustomerId(null);
-      setCustomerSaved(false);
-      setAllItems([]);
-      setEstimatedAmounts({ low: "", medium: "", high: "" });
+      resetForm();
       return;
     }
     
-    // Check if we have customer data from navigation state (from AllCustomer page)
     if (location.state?.customerData) {
       const customerData = location.state.customerData;
       console.log("Loading customer from state:", customerData);
       
       if (!customerData._id) {
-        console.error("Customer data has no ID");
         showToast('Invalid customer data', 'error');
-        navigate('/add-customer');
+        navigate('/Role-Add-Customer');
         return;
       }
       
@@ -156,41 +187,46 @@ export default function AddCustomer() {
       setCustomerId(customerData._id);
       setCustomerSaved(true);
       
-      // Load all jobs for this customer
       await loadCustomerJobs(customerData._id);
-      
       showToast('Customer loaded for editing', 'success');
-    } 
-    // Check if we have an ID in the URL (for direct access)
-    else {
-      const pathParts = location.pathname.split('/');
+    } else {
+      const pathParts = currentPath.split('/');
       const lastPart = pathParts[pathParts.length - 1];
       
       console.log("Last part of URL:", lastPart);
       
-      // Check if it's a valid MongoDB ObjectId (24 characters hex)
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(lastPart);
       
-      if (isValidObjectId) {
+      if (isValidObjectId && pathParts[pathParts.length - 2] === 'Role-Add-Customer') {
         console.log("Loading customer by ID from URL:", lastPart);
         await loadCustomerForEdit(lastPart);
-      } else {
-        console.log("Not a valid customer ID, redirecting to add customer");
-        navigate('/add-customer');
+      } else if (lastPart !== 'Role-Add-Customer' && lastPart !== 'role-add-customer') {
+        console.log("Not a valid customer ID, redirecting to Role Add Customer");
+        navigate('/Role-Add-Customer');
       }
     }
   };
 
-  // Load customer by ID for editing
+  const resetForm = () => {
+    setCustomer({ name: "", phone: "", address: "" });
+    setCustomerId(null);
+    setCustomerSaved(false);
+    setAllItems([]);
+    setEstimatedAmounts({ low: "", medium: "", high: "" });
+    setCurrentWorkMaterials([]);
+    setWorkName("");
+    setCurrentJobId(null);
+    setIsEditMode(false);
+  };
+
   const loadCustomerForEdit = async (id) => {
     try {
       setLoadingCustomer(true);
       const response = await getCustomerById(id);
       console.log("Customer loaded for edit:", response);
       
+      // ✅ FIXED: Handle different response structures
       let customerData;
-      
-      // ✅ FIXED: Check different response structures
       if (response?.data?.customer) {
         customerData = response.data.customer;
       } else if (response?.data) {
@@ -212,9 +248,7 @@ export default function AddCustomer() {
       setCustomerId(customerData._id || customerData.id);
       setCustomerSaved(true);
       
-      // Load all jobs for this customer
       await loadCustomerJobs(customerData._id || customerData.id);
-      
       showToast('Customer loaded for editing', 'success');
     } catch (error) {
       console.error("Error loading customer:", error);
@@ -224,7 +258,6 @@ export default function AddCustomer() {
     }
   };
 
-  // Load all jobs for a customer
   const loadCustomerJobs = async (custId) => {
     try {
       setLoadingJobs(true);
@@ -245,14 +278,11 @@ export default function AddCustomer() {
       
       console.log("Extracted jobs data:", jobsData);
       
-      // Transform jobs to allItems format
       if (jobsData.length > 0) {
-        // Use the most recent job
         const latestJob = jobsData[0];
         setCurrentJobId(latestJob._id);
         
-        // Load works with proper calculations
-        if (latestJob.works && latestJob.works.length > 0) {
+        if (latestJob.works?.length > 0) {
           const processedWorks = latestJob.works.map(work => ({
             name: work.name || '',
             qty: Number(work.qty) || 1,
@@ -270,7 +300,6 @@ export default function AddCustomer() {
           setAllItems(processedWorks);
         }
         
-        // Load estimated amounts if they exist
         if (latestJob.estimatedAmounts) {
           setEstimatedAmounts({
             low: latestJob.estimatedAmounts.low || "",
@@ -278,8 +307,6 @@ export default function AddCustomer() {
             high: latestJob.estimatedAmounts.high || ""
           });
         }
-        
-        showToast('Customer jobs loaded', 'success');
       }
     } catch (error) {
       console.error("Error loading customer jobs:", error);
@@ -306,7 +333,7 @@ export default function AddCustomer() {
       
       setBusinessProfile(profileData);
     } catch (error) {
-      console.log("No business profile found or error loading:", error);
+      console.log("No business profile found");
     }
   };
 
@@ -314,7 +341,6 @@ export default function AddCustomer() {
     try {
       setLoadingBills(true);
       const response = await fetchJobsByCustomer(custId);
-      console.log("Saved bills fetched:", response);
       
       // ✅ FIXED: Handle different response formats
       let billsData = [];
@@ -345,32 +371,36 @@ export default function AddCustomer() {
     setToast({ show: false, message: "", type: "" });
   };
 
-  // SAVE/UPDATE CUSTOMER - Using API with redirect to /admin-all-customer
+  // SAVE CUSTOMER
   const saveCustomer = async () => {
     if (!customer.name || !customer.phone) {
       showToast("Please fill customer name and phone", "error");
       return;
     }
     
+    const currentToken = localStorage.getItem('roleToken');
+    if (!currentToken) {
+      showToast("Session expired. Please login again", "error");
+      setTimeout(() => navigate('/login'), 1500);
+      return;
+    }
+    
     try {
       setSavingCustomer(true);
       
-      let response;
       if (isEditMode && customerId) {
         // Update existing customer
-        response = await updateCustomer(customerId, customer);
+        const response = await updateCustomer(customerId, customer);
         console.log("Customer updated:", response);
         showToast("Customer Updated Successfully", "success");
         
-        // ✅ Redirect to /admin-all-customer after successful update
         setTimeout(() => {
-          navigate('/admin-all-customer');
+          navigate(getRedirectPath());
         }, 1500);
-        
       } else {
         // Create new customer
-        response = await createCustomer(customer);
-        console.log("Customer saved:", response);
+        const response = await createCustomer(customer);
+        console.log('Customer saved response:', response);
         
         // ✅ FIXED: Extract customer data properly
         let savedCustomerData;
@@ -392,16 +422,14 @@ export default function AddCustomer() {
         setCustomer(savedCustomerData);
         setCustomerId(savedCustomerData._id || savedCustomerData.id);
       }
-      
     } catch (err) {
       console.error("Error saving customer:", err);
       console.error("Error response:", err.response?.data);
       
-      // ✅ FIXED: Better error handling
       if (err.response?.status === 401) {
         showToast("Session expired. Please login again", "error");
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('user');
+        localStorage.removeItem('roleToken');
+        localStorage.removeItem('roleUser');
         setTimeout(() => navigate('/login'), 1500);
       } else {
         showToast(err.response?.data?.message || `Error ${isEditMode ? 'updating' : 'saving'} customer`, "error");
@@ -411,7 +439,7 @@ export default function AddCustomer() {
     }
   };
 
-  // ADD EXPENSE TO CURRENT WORK
+  // ADD EXPENSE
   const addExpense = () => {
     if (!matName || matQty <= 0 || matRate <= 0) {
       showToast("Please enter valid material details", "error");
@@ -455,7 +483,6 @@ export default function AddCustomer() {
       total: newTotal
     });
 
-    // Recalculate expense total for the work
     updatedItems[editingItemIndex].expenseTotal =
       updatedItems[editingItemIndex].materials.reduce((sum, exp) => sum + exp.total, 0);
 
@@ -465,7 +492,7 @@ export default function AddCustomer() {
     showToast("Expense added successfully", "success");
   };
 
-  // SAVE CURRENT WORK WITH ALL ITS EXPENSES
+  // SAVE WORK
   const saveWorkWithExpenses = () => {
     if (!workName || workQty <= 0) {
       showToast("Please enter valid work name and quantity", "error");
@@ -482,16 +509,13 @@ export default function AddCustomer() {
     };
 
     setAllItems([...allItems, newWork]);
-
-    // Clear current work form
     setWorkName("");
     setWorkQty(1);
     setCurrentWorkMaterials([]);
-    
     showToast("Work added successfully", "success");
   };
 
-  // INCREASE QUANTITY
+  // Quantity controls
   const increaseQuantity = (itemIndex) => {
     const updatedItems = [...allItems];
     updatedItems[itemIndex].qty += 1;
@@ -499,7 +523,6 @@ export default function AddCustomer() {
     showToast("Quantity increased", "success");
   };
 
-  // DECREASE QUANTITY
   const decreaseQuantity = (itemIndex) => {
     const updatedItems = [...allItems];
     if (updatedItems[itemIndex].qty > 1) {
@@ -511,17 +534,14 @@ export default function AddCustomer() {
     }
   };
 
-  // START EDITING WORK
+  // Edit functions
   const startEditingWork = (itemIndex) => {
     const item = allItems[itemIndex];
     setEditingItemIndex(itemIndex);
-    setEditingExpenseIndex(null);
-    setAddingExpenseInEdit(false);
     setEditingWorkName(item.name);
     setEditingWorkQty(item.qty);
   };
 
-  // SAVE WORK EDIT
   const saveWorkEdit = () => {
     if (!editingWorkName || editingWorkQty <= 0) {
       showToast("Please enter valid work name and quantity", "error");
@@ -536,29 +556,14 @@ export default function AddCustomer() {
     };
 
     setAllItems(updatedItems);
-    setEditingItemIndex(null);
-    setEditingWorkName("");
-    setEditingWorkQty(1);
+    cancelEdit();
     showToast("Work updated successfully", "success");
   };
 
-  // CANCEL EDIT
-  const cancelEdit = () => {
-    setEditingItemIndex(null);
-    setEditingExpenseIndex(null);
-    setAddingExpenseInEdit(false);
-    setEditingWorkName("");
-    setEditingWorkQty(1);
-    setEditingExpense({ name: "", qty: 1, rate: 0, total: 0 });
-    setNewExpenseInEdit({ name: "", qty: 1, rate: 0 });
-  };
-
-  // START EDITING EXPENSE
   const startEditingExpense = (itemIndex, expenseIndex) => {
     const expense = allItems[itemIndex].materials[expenseIndex];
     setEditingItemIndex(itemIndex);
     setEditingExpenseIndex(expenseIndex);
-    setAddingExpenseInEdit(false);
     setEditingExpense({
       name: expense.name,
       qty: expense.qty,
@@ -567,7 +572,6 @@ export default function AddCustomer() {
     });
   };
 
-  // SAVE EXPENSE EDIT
   const saveExpenseEdit = () => {
     if (!editingExpense.name || editingExpense.qty <= 0 || editingExpense.rate <= 0) {
       showToast("Please enter valid material details", "error");
@@ -586,34 +590,38 @@ export default function AddCustomer() {
       total: newTotal
     };
 
-    // Recalculate expense total for the work
     updatedItems[editingItemIndex].expenseTotal =
       updatedItems[editingItemIndex].materials.reduce((sum, exp) => sum + exp.total, 0);
 
     setAllItems(updatedItems);
-    setEditingItemIndex(null);
-    setEditingExpenseIndex(null);
-    setEditingExpense({ name: "", qty: 1, rate: 0, total: 0 });
+    cancelEdit();
     showToast("Expense updated successfully", "success");
   };
 
-  // REMOVE ITEM
+  const cancelEdit = () => {
+    setEditingItemIndex(null);
+    setEditingExpenseIndex(null);
+    setAddingExpenseInEdit(false);
+    setEditingWorkName("");
+    setEditingWorkQty(1);
+    setEditingExpense({ name: "", qty: 1, rate: 0, total: 0 });
+    setNewExpenseInEdit({ name: "", qty: 1, rate: 0 });
+  };
+
   const removeItem = (index) => {
     setAllItems(allItems.filter((_, i) => i !== index));
     showToast("Item removed", "success");
   };
 
-  // REMOVE EXPENSE FROM CURRENT WORK
   const removeCurrentExpense = (index) => {
     setCurrentWorkMaterials(currentWorkMaterials.filter((_, i) => i !== index));
   };
 
-  // REMOVE EXPENSE FROM EDIT MODE
   const removeExpenseFromEdit = (expenseIndex) => {
     const updatedItems = [...allItems];
-    updatedItems[editingItemIndex].materials = updatedItems[editingItemIndex].materials.filter((_, i) => i !== expenseIndex);
+    updatedItems[editingItemIndex].materials = 
+      updatedItems[editingItemIndex].materials.filter((_, i) => i !== expenseIndex);
     
-    // Recalculate expense total
     updatedItems[editingItemIndex].expenseTotal =
       updatedItems[editingItemIndex].materials.reduce((sum, exp) => sum + exp.total, 0);
     
@@ -621,51 +629,41 @@ export default function AddCustomer() {
     showToast("Expense removed", "success");
   };
 
-  // GRAND TOTAL CALCULATION - FIXED
+  // CALCULATIONS
   const calculateGrandTotal = () => {
     return allItems.reduce((sum, item) => {
-      // Calculate materials total for this work
       const materialsTotal = item.materials?.reduce((matSum, mat) => {
         return matSum + (mat.total || 0);
       }, 0) || 0;
       
-      // Multiply by quantity
-      const workTotal = materialsTotal * (Number(item.qty) || 1);
-      
-      return sum + workTotal;
+      return sum + (materialsTotal * (Number(item.qty) || 1));
     }, 0);
   };
 
   const grandTotal = calculateGrandTotal();
 
-  // Format currency
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return "Rs 0";
     return `Rs ${Number(amount).toFixed(2)}`;
   };
 
-  // Format estimated amount
   const formatEstimatedAmount = (amount) => {
     if (!amount) return '';
     return `Rs ${Number(amount).toFixed(2)}`;
   };
 
-  // Updated Print Function - uses latest data
+  // PRINT FUNCTION - Complete with styles
   const printBillDirect = (billData) => {
     const profile = businessProfile;
-
-    // Process works data - use the most up-to-date data
     const works = billData.works || allItems || [];
     
-    // Calculate totals with current data
     const calculateWorkTotal = (work) => {
       const materialsTotal = work.materials?.reduce((sum, m) => sum + (m.total || 0), 0) || 0;
       return materialsTotal * (work.qty || 1);
     };
 
-    const printGrandTotal = billData.total || grandTotal || works.reduce((sum, work) => sum + calculateWorkTotal(work), 0);
+    const printGrandTotal = billData.total || grandTotal;
 
-    // Professional Print Styles
     const printStyles = `
       <style>
         @page {
@@ -688,7 +686,6 @@ export default function AddCustomer() {
             padding: 10px;
           }
           
-          /* Professional Header */
           .print-header {
             text-align: center;
             border-bottom: 3px solid #2563eb;
@@ -744,7 +741,6 @@ export default function AddCustomer() {
             font-weight: 500;
           }
           
-          /* Works Section */
           .print-works {
             margin-bottom: 20px;
           }
@@ -788,7 +784,6 @@ export default function AddCustomer() {
             color: #475569;
           }
           
-          /* Materials Table */
           .print-materials-table {
             width: 100%;
             border-collapse: collapse;
@@ -809,10 +804,6 @@ export default function AddCustomer() {
             border-bottom: 1px solid #e2e8f0;
           }
           
-          .print-materials-table tr:last-child td {
-            border-bottom: none;
-          }
-          
           .print-work-total {
             text-align: right;
             margin-top: 12px;
@@ -822,7 +813,6 @@ export default function AddCustomer() {
             font-size: 14px;
           }
           
-          /* Grand Total */
           .print-grand-total {
             display: flex;
             justify-content: space-between;
@@ -845,7 +835,6 @@ export default function AddCustomer() {
             color: #fbbf24;
           }
           
-          /* Footer */
           .print-footer {
             text-align: center;
             border-top: 2px solid #e2e8f0;
@@ -875,10 +864,8 @@ export default function AddCustomer() {
       </style>
     `;
 
-    // Generate Print HTML with updated data
     const printHTML = `
       <div class="print-bill">
-        <!-- Header -->
         <div class="print-header">
           <div class="print-business-name">${profile?.shopName || 'Business Name'}</div>
           <div class="print-business-contact">
@@ -888,25 +875,21 @@ export default function AddCustomer() {
           ${profile?.address ? `<div class="print-business-address">${profile.address}</div>` : ''}
         </div>
 
-        <!-- Invoice Title -->
         <div class="print-title">
           <h1>INVOICE</h1>
         </div>
 
-        <!-- Bill Details -->
         <div class="print-bill-details">
           <span><strong>Bill #:</strong> ${billData.billNumber || 'N/A'}</span>
           <span><strong>Date:</strong> ${billData.date || new Date().toLocaleDateString()}</span>
         </div>
 
-        <!-- Customer Details -->
         <div style="background: #f8fafc; padding: 10px 15px; border-radius: 8px; margin: 15px 0; font-size: 13px;">
           <div><strong>Customer:</strong> ${billData.customer?.name || customer.name || ''}</div>
           <div><strong>Phone:</strong> ${billData.customer?.phone || customer.phone || ''}</div>
           ${(billData.customer?.address || customer.address) ? `<div><strong>Address:</strong> ${billData.customer?.address || customer.address}</div>` : ''}
         </div>
 
-        <!-- Works Section -->
         <div class="print-works">
           <h3>WORK DETAILS</h3>
           ${works.length > 0 ? works.map((work, idx) => `
@@ -946,13 +929,11 @@ export default function AddCustomer() {
           `).join('') : '<p style="text-align: center; color: #64748b;">No works found</p>'}
         </div>
 
-        <!-- Grand Total -->
         <div class="print-grand-total">
           <span class="print-grand-total-label">GRAND TOTAL</span>
           <span class="print-grand-total-value">${formatCurrency(printGrandTotal)}</span>
         </div>
 
-        <!-- Estimated Amounts -->
         ${(billData.estimatedAmounts && Object.keys(billData.estimatedAmounts).length > 0) || estimatedAmounts.low || estimatedAmounts.medium || estimatedAmounts.high ? `
           <div style="background: #f8fafc; padding: 12px 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2563eb;">
             <strong>Estimated Amounts:</strong><br>
@@ -962,7 +943,6 @@ export default function AddCustomer() {
           </div>
         ` : ''}
 
-        <!-- Footer -->
         <div class="print-footer">
           ${profile?.footerNote ? `<div class="print-footer-note">${profile.footerNote}</div>` : ''}
           <div class="print-footer-contact">
@@ -980,7 +960,7 @@ export default function AddCustomer() {
     window.location.reload();
   };
 
-  // SAVE COMPLETE BILL - Using API (Create or Update) with redirect
+  // SAVE BILL
   const saveBill = async () => {
     if (!customerSaved) {
       showToast("Please save customer first!", "error");
@@ -991,12 +971,17 @@ export default function AddCustomer() {
       return;
     }
 
+    const currentToken = localStorage.getItem('roleToken');
+    if (!currentToken) {
+      showToast("Session expired. Please login again", "error");
+      setTimeout(() => navigate('/login'), 1500);
+      return;
+    }
+
     try {
       setSavingBill(true);
       
-      // Transform allItems to match the schema exactly with proper calculations
       const works = allItems.map(item => {
-        // Ensure materials have correct totals
         const materials = (item.materials || []).map(mat => ({
           name: mat.name,
           qty: Number(mat.qty) || 1,
@@ -1004,24 +989,19 @@ export default function AddCustomer() {
           total: (Number(mat.qty) || 1) * (Number(mat.rate) || 0)
         }));
         
-        // Calculate work total
-        const workTotal = materials.reduce((sum, mat) => sum + mat.total, 0);
-        
         return {
           name: item.name,
           qty: Number(item.qty) || 1,
           materials: materials,
-          expenseTotal: workTotal
+          expenseTotal: materials.reduce((sum, mat) => sum + mat.total, 0)
         };
       });
 
-      // Only include estimated amounts that have values
       const estimatedAmountsToSend = {};
       if (estimatedAmounts.low) estimatedAmountsToSend.low = Number(estimatedAmounts.low);
       if (estimatedAmounts.medium) estimatedAmountsToSend.medium = Number(estimatedAmounts.medium);
       if (estimatedAmounts.high) estimatedAmountsToSend.high = Number(estimatedAmounts.high);
 
-      // Calculate final grand total
       const finalGrandTotal = works.reduce((sum, work) => {
         const workTotal = work.materials.reduce((matSum, mat) => matSum + mat.total, 0);
         return sum + (workTotal * work.qty);
@@ -1038,26 +1018,20 @@ export default function AddCustomer() {
 
       console.log("Sending bill data:", billData);
       
-      let response;
-      // If in edit mode and we have a current job ID, update it
       if (isEditMode && currentJobId) {
-        // Update the existing job
-        response = await updateJob(currentJobId, billData);
+        const response = await updateJob(currentJobId, billData);
         console.log("Bill updated:", response);
         showToast("Bill Updated Successfully", "success");
         
-        // ✅ Redirect to /admin-all-customer after successful bill update
         setTimeout(() => {
-          navigate('/admin-all-customer');
+          navigate(getRedirectPath());
         }, 1500);
-        
       } else {
-        // Create new bill
-        response = await createJob(billData);
+        const response = await createJob(billData);
         console.log("Bill saved:", response);
         showToast("Bill Saved Successfully", "success");
 
-        // ✅ FIXED: Get the saved bill data from response
+        // ✅ FIXED: Extract saved bill data properly
         let savedBill = null;
         if (response?.data?.data) {
           savedBill = response.data.data;
@@ -1067,7 +1041,6 @@ export default function AddCustomer() {
           savedBill = response;
         }
 
-        // Create complete bill data for overlay
         const completeBillData = {
           ...savedBill,
           works: works,
@@ -1079,27 +1052,22 @@ export default function AddCustomer() {
           estimatedAmounts: estimatedAmountsToSend
         };
 
-        // Refresh saved bills list
         if (customerId) {
           await fetchSavedBills(customerId);
         }
-
-        // Load latest business profile for print
         await loadBusinessProfile();
 
-        // Show overlay with complete data
         setSavedBillData(completeBillData);
         setShowSuccessOverlay(true);
       }
-
     } catch (err) {
       console.error("Error saving bill:", err);
       console.error("Error response:", err.response?.data);
       
       if (err.response?.status === 401) {
         showToast("Session expired. Please login again", "error");
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('user');
+        localStorage.removeItem('roleToken');
+        localStorage.removeItem('roleUser');
         setTimeout(() => navigate('/login'), 1500);
       } else {
         showToast(err.response?.data?.message || "Error saving bill", "error");
@@ -1109,19 +1077,12 @@ export default function AddCustomer() {
     }
   };
 
-  const handleCloseOverlay = () => {
-    setShowSuccessOverlay(false);
-    setSavedBillData(null);
-  };
-
-  // Handle closing overlay and redirect to /admin-all-customer
   const handleOverlayAndRedirect = () => {
     setShowSuccessOverlay(false);
     setSavedBillData(null);
-    navigate('/admin-all-customer');
+    navigate(getRedirectPath());
   };
 
-  // Check if any estimated amount is filled
   const hasEstimatedAmounts = estimatedAmounts.low || estimatedAmounts.medium || estimatedAmounts.high;
 
   return (
@@ -1141,6 +1102,22 @@ export default function AddCustomer() {
           </div>
         )}
 
+        {/* Role Indicator */}
+        <div className="role-indicator" style={{
+          backgroundColor: userRole === 'admin' ? '#3b82f6' : 
+                          userRole === 'manager' ? '#8b5cf6' : '#10b981',
+          color: 'white',
+          padding: '4px 12px',
+          borderRadius: '20px',
+          fontSize: '12px',
+          fontWeight: '600',
+          display: 'inline-block',
+          marginBottom: '15px'
+        }}>
+          {userRole === 'admin' ? '👑 Admin Mode' : 
+           userRole === 'manager' ? '👔 Manager Mode' : '👤 Customer Creator Mode'}
+        </div>
+
         {/* Loading indicator */}
         {(loadingCustomer || loadingJobs) && (
           <div className="loading-overlay-Customer">
@@ -1149,7 +1126,7 @@ export default function AddCustomer() {
           </div>
         )}
 
-        {/* Professional Success Overlay */}
+        {/* Success Overlay */}
         {showSuccessOverlay && savedBillData && (
           <div className="success-overlay-Customer">
             <div className="success-modal-Customer professional-success">
@@ -1169,25 +1146,19 @@ export default function AddCustomer() {
               </div>
 
               <div className="success-modal-body-Customer">
-                {/* Work Details Section */}
-                {savedBillData.works && savedBillData.works.length > 0 && (
+                {savedBillData.works?.length > 0 && (
                   <div className="bill-section-Customer">
                     <h3>Work Details</h3>
                     {savedBillData.works.map((work, workIndex) => (
                       <div key={workIndex} className="saved-item-card-Customer">
                         <div className="saved-item-header-Customer">
-                          <div className="work-title-with-controls">
-                            <span className="work-title-Customer">
-                              <strong>{work.name}</strong>
-                            </span>
-                            <span className="qty-display">Qty: {work.qty}</span>
-                          </div>
+                          <span className="work-title-Customer">
+                            <strong>{work.name}</strong> (Qty: {work.qty})
+                          </span>
                         </div>
 
-                        {/* Materials Table */}
-                        {work.materials && work.materials.length > 0 ? (
+                        {work.materials?.length > 0 ? (
                           <div className="saved-expenses-Customer">
-                            <small>Materials:</small>
                             <table className="bill-table-Customer">
                               <thead>
                                 <tr>
@@ -1209,7 +1180,6 @@ export default function AddCustomer() {
                               </tbody>
                             </table>
                             
-                            {/* Work Total */}
                             <div className="work-total-display">
                               <div className="work-total-calculation">
                                 <span>Materials Total: {formatCurrency(work.materials.reduce((sum, m) => sum + m.total, 0))}</span>
@@ -1223,43 +1193,21 @@ export default function AddCustomer() {
                             </div>
                           </div>
                         ) : (
-                          <p className="empty-state-Customer">No materials added for this work</p>
+                          <p className="empty-state-Customer">No materials added</p>
                         )}
                       </div>
                     ))}
                     
-                    {/* Grand Total in Success Modal */}
                     <div className="success-grand-total">
                       <span>GRAND TOTAL:</span>
                       <span className="success-grand-total-value">{formatCurrency(savedBillData.total || grandTotal)}</span>
                     </div>
                   </div>
                 )}
-
-                {/* Estimated Amounts */}
-                {savedBillData.estimatedAmounts && Object.keys(savedBillData.estimatedAmounts).length > 0 && (
-                  <div className="bill-section-Customer">
-                    <h3>Estimated Amounts</h3>
-                    <div className="estimated-preview">
-                      {savedBillData.estimatedAmounts.low && (
-                        <p><strong>Low:</strong> {formatCurrency(savedBillData.estimatedAmounts.low)}</p>
-                      )}
-                      {savedBillData.estimatedAmounts.medium && (
-                        <p><strong>Medium:</strong> {formatCurrency(savedBillData.estimatedAmounts.medium)}</p>
-                      )}
-                      {savedBillData.estimatedAmounts.high && (
-                        <p><strong>High:</strong> {formatCurrency(savedBillData.estimatedAmounts.high)}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="success-modal-footer-Customer">
-                <button 
-                  onClick={() => printBillDirect(savedBillData)} 
-                  className="print-btn-Customer professional"
-                >
+                <button onClick={() => printBillDirect(savedBillData)} className="print-btn-Customer professional">
                   <FiPrinter className="btn-icon" />
                   Print Bill
                 </button>
@@ -1283,10 +1231,7 @@ export default function AddCustomer() {
                     <span className="bill-date">{bill.date}</span>
                     <span className="bill-total">{formatCurrency(bill.total)}</span>
                   </div>
-                  <button 
-                    onClick={() => printBillDirect(bill)} 
-                    className="view-bill-btn"
-                  >
+                  <button onClick={() => printBillDirect(bill)} className="view-bill-btn">
                     <FiPrinter className="btn-icon" />
                     Print
                   </button>
@@ -1311,7 +1256,7 @@ export default function AddCustomer() {
                   placeholder="Enter customer name"
                   value={customer.name}
                   onChange={e => setCustomer({ ...customer, name: e.target.value })}
-                  className={customerSaved ? 'disabled-input-Customer customer-name-add-customer' : 'customer-name-add-customer'}
+                  className={customerSaved ? 'disabled-input-Customer' : ''}
                   disabled={customerSaved}
                 />
               </div>
@@ -1322,7 +1267,7 @@ export default function AddCustomer() {
                   placeholder="03XX-XXXXXXX"
                   value={customer.phone}
                   onChange={e => setCustomer({ ...customer, phone: e.target.value })}
-                  className={customerSaved ? 'disabled-input-Customer customer-phone-add-customer' : 'customer-phone-add-customer'}
+                  className={customerSaved ? 'disabled-input-Customer' : ''}
                   disabled={customerSaved}
                 />
               </div>
@@ -1333,7 +1278,7 @@ export default function AddCustomer() {
                   placeholder="Enter complete address"
                   value={customer.address}
                   onChange={e => setCustomer({ ...customer, address: e.target.value })}
-                  className={customerSaved ? 'disabled-input-Customer customer-address-add-customer' : 'customer-address-add-customer'}
+                  className={customerSaved ? 'disabled-input-Customer' : ''}
                   disabled={customerSaved}
                 />
               </div>
@@ -1344,22 +1289,14 @@ export default function AddCustomer() {
               className={`save-customer-btn-Customer ${customerSaved ? 'saved-Customer' : ''}`}
               disabled={customerSaved || savingCustomer || loadingCustomer}
             >
-              {loadingCustomer ? (
-                <>Loading...</>
-              ) : savingCustomer ? (
-                <>{isEditMode ? 'Updating...' : 'Saving...'}</>
-              ) : customerSaved ? (
-                <>
-                  <span className="btn-icon-Customer">✓</span>
-                  {isEditMode ? 'Customer Updated' : 'Customer Saved'}
-                </>
-              ) : (
-                isEditMode ? 'Update Customer' : 'Save Customer'
-              )}
+              {loadingCustomer ? 'Loading...' : 
+               savingCustomer ? (isEditMode ? 'Updating...' : 'Saving...') :
+               customerSaved ? (isEditMode ? 'Customer Updated' : 'Customer Saved') :
+               isEditMode ? 'Update Customer' : 'Save Customer'}
             </button>
           </div>
 
-          {/* Combined Work & Materials Section */}
+          {/* Work & Materials Section */}
           <div className="section-card-Customer">
             <h2 className="section-title-Customer">
               <span className="section-icon-Customer">🔧</span>
@@ -1375,18 +1312,16 @@ export default function AddCustomer() {
                     placeholder="Work name (e.g., Painting, Plumbing)"
                     value={workName}
                     onChange={e => setWorkName(e.target.value)}
-                    className="work-name-add-customer"
                     disabled={!customerSaved}
                   />
                 </div>
-                <div className="form-group-Customer quantity-input-Customer">
+                <div className="form-group-Customer">
                   <input
                     type="number"
                     placeholder="Quantity"
                     value={workQty}
                     onChange={e => setWorkQty(e.target.value)}
                     min="1"
-                    className="work-quantity-add-customer"
                     disabled={!customerSaved}
                   />
                 </div>
@@ -1403,7 +1338,6 @@ export default function AddCustomer() {
                         placeholder="Material name"
                         value={matName}
                         onChange={e => setMatName(e.target.value)}
-                        className="material-name-add-customer"
                       />
                     </div>
                     <div className="form-group-Customer">
@@ -1413,7 +1347,6 @@ export default function AddCustomer() {
                         value={matQty}
                         onChange={e => setMatQty(e.target.value)}
                         min="1"
-                        className="material-quantity-add-customer"
                       />
                     </div>
                     <div className="form-group-Customer">
@@ -1423,8 +1356,6 @@ export default function AddCustomer() {
                         value={matRate}
                         onChange={e => setMatRate(e.target.value)}
                         min="0"
-                        step="1"
-                        className="material-rate-add-customer"
                       />
                     </div>
                     <button
@@ -1474,7 +1405,7 @@ export default function AddCustomer() {
                 {allItems.map((item, idx) => (
                   <div key={idx} className="saved-item-card-Customer">
                     {editingItemIndex === idx ? (
-                      // EDIT MODE - Work being edited
+                      // EDIT MODE
                       <div className="edit-mode-container">
                         {/* Work Edit Form */}
                         <div className="edit-work-section">
@@ -1485,7 +1416,6 @@ export default function AddCustomer() {
                               value={editingWorkName}
                               onChange={(e) => setEditingWorkName(e.target.value)}
                               placeholder="Work name"
-                              className="edit-work-name-add-customer"
                             />
                             <input
                               type="number"
@@ -1493,25 +1423,20 @@ export default function AddCustomer() {
                               onChange={(e) => setEditingWorkQty(e.target.value)}
                               min="1"
                               placeholder="Quantity"
-                              className="edit-work-quantity-add-customer"
                             />
                             <div className="edit-actions">
-                              <button onClick={saveWorkEdit} className="save-edit-btn">Save Work</button>
+                              <button onClick={saveWorkEdit} className="save-edit-btn">Save</button>
                               <button onClick={cancelEdit} className="cancel-edit-btn">Cancel</button>
                             </div>
                           </div>
                         </div>
 
-                        {/* Add Material Button inside Edit Mode */}
+                        {/* Add Material Button */}
                         {!addingExpenseInEdit ? (
-                          <button 
-                            onClick={() => setAddingExpenseInEdit(true)} 
-                            className="add-expense-in-edit-btn"
-                          >
-                            + Add New Material to this Work
+                          <button onClick={() => setAddingExpenseInEdit(true)} className="add-expense-in-edit-btn">
+                            + Add New Material
                           </button>
                         ) : (
-                          /* Add Material Form inside Edit Mode */
                           <div className="add-expense-in-edit-mode">
                             <h4>Add New Material</h4>
                             <div className="add-expense-form">
@@ -1520,7 +1445,6 @@ export default function AddCustomer() {
                                 placeholder="Material name"
                                 value={newExpenseInEdit.name}
                                 onChange={(e) => setNewExpenseInEdit({ ...newExpenseInEdit, name: e.target.value })}
-                                className="edit-material-name-add-customer"
                               />
                               <input
                                 type="number"
@@ -1528,7 +1452,6 @@ export default function AddCustomer() {
                                 value={newExpenseInEdit.qty}
                                 onChange={(e) => setNewExpenseInEdit({ ...newExpenseInEdit, qty: parseInt(e.target.value) || 1 })}
                                 min="1"
-                                className="edit-material-quantity-add-customer"
                               />
                               <input
                                 type="number"
@@ -1536,42 +1459,37 @@ export default function AddCustomer() {
                                 value={newExpenseInEdit.rate}
                                 onChange={(e) => setNewExpenseInEdit({ ...newExpenseInEdit, rate: parseFloat(e.target.value) || 0 })}
                                 min="0"
-                                className="edit-material-rate-add-customer"
                               />
                               <div className="edit-actions">
-                                <button onClick={addExpenseInEdit} className="save-edit-btn">Add Material</button>
+                                <button onClick={addExpenseInEdit} className="save-edit-btn">Add</button>
                                 <button onClick={() => setAddingExpenseInEdit(false)} className="cancel-edit-btn">Cancel</button>
                               </div>
                             </div>
                           </div>
                         )}
 
-                        {/* Display Existing Materials */}
-                        {item.materials && item.materials.length > 0 && (
+                        {/* Existing Materials */}
+                        {item.materials?.length > 0 && (
                           <div className="existing-expenses-section">
                             <h4>Existing Materials</h4>
                             {item.materials.map((mat, matIdx) => (
                               <div key={matIdx} className="existing-expense-item">
                                 {editingExpenseIndex === matIdx ? (
-                                  /* Edit Material Form */
                                   <div className="edit-expense-form">
                                     <input
                                       type="text"
                                       value={editingExpense.name}
                                       onChange={(e) => setEditingExpense({ ...editingExpense, name: e.target.value })}
-                                      className="edit-existing-material-name-add-customer"
                                     />
                                     <input
                                       type="number"
                                       value={editingExpense.qty}
                                       onChange={(e) => setEditingExpense({ ...editingExpense, qty: parseInt(e.target.value) || 1 })}
-                                      className="edit-existing-material-quantity-add-customer"
                                     />
                                     <input
                                       type="number"
                                       value={editingExpense.rate}
                                       onChange={(e) => setEditingExpense({ ...editingExpense, rate: parseFloat(e.target.value) || 0 })}
-                                      className="edit-existing-material-rate-add-customer"
                                     />
                                     <div className="edit-actions-small">
                                       <button onClick={saveExpenseEdit} className="save-small">✓</button>
@@ -1579,7 +1497,6 @@ export default function AddCustomer() {
                                     </div>
                                   </div>
                                 ) : (
-                                  /* Normal Material Display */
                                   <>
                                     <div className="expense-details">
                                       <span className="expense-name">{mat.name}</span>
@@ -1607,27 +1524,18 @@ export default function AddCustomer() {
                               <strong>{item.name}</strong>
                             </span>
                             <div className="quantity-controls">
-                              <button
-                                onClick={() => decreaseQuantity(idx)}
-                                className="qty-btn minus"
-                                title="Decrease quantity"
-                              >−</button>
+                              <button onClick={() => decreaseQuantity(idx)} className="qty-btn minus">−</button>
                               <span className="qty-display">{item.qty}</span>
-                              <button
-                                onClick={() => increaseQuantity(idx)}
-                                className="qty-btn plus"
-                                title="Increase quantity"
-                              >+</button>
+                              <button onClick={() => increaseQuantity(idx)} className="qty-btn plus">+</button>
                             </div>
                           </div>
                           <div className="item-actions">
-                            <button onClick={() => startEditingWork(idx)} className="edit-item-btn" title="Edit work">✎</button>
-                            <button onClick={() => removeItem(idx)} className="remove-item-Customer" title="Remove item">×</button>
+                            <button onClick={() => startEditingWork(idx)} className="edit-item-btn">✎</button>
+                            <button onClick={() => removeItem(idx)} className="remove-item-Customer">×</button>
                           </div>
                         </div>
 
-                        {/* Display Materials */}
-                        {item.materials && item.materials.length > 0 && (
+                        {item.materials?.length > 0 && (
                           <div className="saved-expenses-Customer">
                             <small>Materials:</small>
                             {item.materials.map((mat, matIdx) => (
@@ -1638,11 +1546,9 @@ export default function AddCustomer() {
                                     {mat.qty} × {formatCurrency(mat.rate)} = {formatCurrency(mat.total)}
                                   </span>
                                 </div>
-                                <span className="expense-total-mini">{formatCurrency(mat.total)}</span>
                               </div>
                             ))}
                             
-                            {/* Work Total Display */}
                             <div className="work-total-display">
                               <div className="work-total-calculation">
                                 <span>Materials Total: {formatCurrency(item.expenseTotal)}</span>
@@ -1668,12 +1574,6 @@ export default function AddCustomer() {
               <span className="grand-total-label-Customer">Grand Total (All Works)</span>
               <span className="grand-total-amount-Customer">{formatCurrency(grandTotal)}</span>
             </div>
-            {allItems.length > 0 && (
-              <div className="total-breakdown-Customer">
-                <span>Total Works: {allItems.length}</span>
-                <span>Total Quantity: {allItems.reduce((sum, item) => sum + item.qty, 0)}</span>
-              </div>
-            )}
           </div>
          
           {/* Estimated Amounts Section */}
@@ -1691,8 +1591,6 @@ export default function AddCustomer() {
                   value={estimatedAmounts.low}
                   onChange={e => setEstimatedAmounts({ ...estimatedAmounts, low: e.target.value })}
                   min="0"
-                  step="1000"
-                  className="estimated-low-add-customer"
                   disabled={!customerSaved}
                 />
               </div>
@@ -1704,8 +1602,6 @@ export default function AddCustomer() {
                   value={estimatedAmounts.medium}
                   onChange={e => setEstimatedAmounts({ ...estimatedAmounts, medium: e.target.value })}
                   min="0"
-                  step="1000"
-                  className="estimated-medium-add-customer"
                   disabled={!customerSaved}
                 />
               </div>
@@ -1717,8 +1613,6 @@ export default function AddCustomer() {
                   value={estimatedAmounts.high}
                   onChange={e => setEstimatedAmounts({ ...estimatedAmounts, high: e.target.value })}
                   min="0"
-                  step="1000"
-                  className="estimated-high-add-customer"
                   disabled={!customerSaved}
                 />
               </div>
@@ -1745,14 +1639,11 @@ export default function AddCustomer() {
             className="save-bill-btn-Customer"
             disabled={!customerSaved || allItems.length === 0 || savingBill}
           >
-            {savingBill ? (
-              isEditMode ? "Updating Bill..." : "Saving Bill..."
-            ) : (
-              isEditMode ? "Update Complete Bill" : "Save Complete Bill"
-            )}
+            {savingBill ? (isEditMode ? "Updating Bill..." : "Saving Bill...") :
+             isEditMode ? "Update Complete Bill" : "Save Complete Bill"}
           </button>
 
-          {/* Customer not saved warning */}
+          {/* Warning */}
           {!customerSaved && (
             <div className="warning-message-Customer">
               ⚠️ Please save customer information first to add items

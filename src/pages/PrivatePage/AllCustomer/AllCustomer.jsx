@@ -4,11 +4,11 @@ import {
   FiUsers, FiSearch, FiPlus, FiEdit2, FiShoppingBag, 
   FiX, FiFilter, FiChevronRight, FiPackage, FiClock,
   FiCheckCircle, FiAlertCircle, FiDollarSign, FiChevronDown,
-  FiGrid, FiList, FiEye
+  FiGrid, FiList, FiEye, FiCalendar // ✅ Add FiCalendar icon
 } from "react-icons/fi";
 import { 
   BsPersonCircle, BsTelephone, BsGeoAlt,
-  BsBoxSeam, BsCurrencyRupee, BsWallet2
+  BsBoxSeam, BsCurrencyRupee, BsWallet2, BsCalendar2Date // ✅ Add BsCalendar2Date
 } from "react-icons/bs";
 import { 
   MdOutlineRefresh, MdOutlineClear,
@@ -21,6 +21,26 @@ import { createOrder, getOrdersByCustomer } from "../../../api/orderApi";
 import "./AllCustomer.css";
 
 const AllCustomer = () => {
+  const navigate = useNavigate();
+  
+  // ✅ Get user info from localStorage
+  const adminToken = localStorage.getItem("adminToken");
+  const roleToken = localStorage.getItem("roleToken");
+  const adminUser = JSON.parse(localStorage.getItem("user") || "null");
+  const roleUser = JSON.parse(localStorage.getItem("roleUser") || "null");
+  
+  // ✅ Determine user type and permissions
+  const userType = adminToken ? "admin" : (roleToken ? "role" : null);
+  const user = adminUser || roleUser;
+  const userRole = user?.role || "admin";
+  
+  // ✅ Permissions based on user type and role
+  const canAddCustomer = userType === "admin" || ["manager", "data_entry"].includes(userRole);
+  const canEditCustomer = userType === "admin" || ["manager", "data_entry"].includes(userRole);
+  const canCreateOrder = userType === "admin" || ["manager"].includes(userRole);
+  const canViewOrders = true; // Sab dekh sakte hain
+  const canDeleteCustomer = userType === "admin"; // Sirf admin delete kar sakta hai
+
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +55,7 @@ const AllCustomer = () => {
     advancePayment: "",
     remainingBalance: 0,
     status: "pending",
+    dueDate: "", // ✅ Add due date field
     notes: ""
   });
   const [orderLoading, setOrderLoading] = useState(false);
@@ -49,8 +70,6 @@ const AllCustomer = () => {
     const savedView = localStorage.getItem('customerViewMode');
     return savedView || 'list';
   });
-
-  const navigate = useNavigate();
 
   // Status options
   const statusOptions = [
@@ -199,12 +218,24 @@ const AllCustomer = () => {
     }
   };
 
-  // Edit handler
+  // ✅ Edit handler with permission check
   const handleEdit = (e, customer) => {
     e.stopPropagation();
-    navigate(`/edit-customer/${customer._id}`, { 
-      state: { customerData: customer } 
-    });
+    
+    if (!canEditCustomer) {
+      showToast("You don't have permission to edit customers", "error");
+      return;
+    }
+    
+    if (userType === "admin") {
+      navigate(`/edit-customer/${customer._id}`, { 
+        state: { customerData: customer } 
+      });
+    } else {
+      navigate(`/Role-Add-Customer/${customer._id}`, { 
+        state: { customerData: customer } 
+      });
+    }
   };
 
   const handleViewOrders = (e, customer) => {
@@ -221,6 +252,12 @@ const AllCustomer = () => {
 
   const handleCreateOrder = (e, customer) => {
     e.stopPropagation();
+    
+    if (!canCreateOrder) {
+      showToast("You don't have permission to create orders", "error");
+      return;
+    }
+    
     setSelectedCustomer(customer);
     setShowOrderModal(true);
     setOrderData({
@@ -228,8 +265,22 @@ const AllCustomer = () => {
       advancePayment: "",
       remainingBalance: 0,
       status: "pending",
+      dueDate: "", // ✅ Reset due date
       notes: ""
     });
+  };
+
+  const handleAddCustomer = () => {
+    if (!canAddCustomer) {
+      showToast("You don't have permission to add customers", "error");
+      return;
+    }
+    
+    if (userType === "admin") {
+      navigate("/admin-add-customer");
+    } else {
+      navigate("/Role-Add-Customer");
+    }
   };
 
   const handleOrderSubmit = async () => {
@@ -269,6 +320,7 @@ const AllCustomer = () => {
         billNumber: billNumber,
         date: new Date().toISOString(),
         status: orderData.status,
+        dueDate: orderData.dueDate || null, // ✅ Add due date to payload
         notes: orderData.notes || ''
       };
 
@@ -285,6 +337,7 @@ const AllCustomer = () => {
         advancePayment: "",
         remainingBalance: 0,
         status: "pending",
+        dueDate: "", // ✅ Reset due date
         notes: ""
       });
       
@@ -359,6 +412,16 @@ const AllCustomer = () => {
     });
   };
 
+  // ✅ Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleRefresh = () => {
     fetchCustomers();
     setSearchTerm("");
@@ -421,7 +484,7 @@ const AllCustomer = () => {
   }
 
   return (
-    <div className="main-container-customer-page    sideber-container-Mobile">
+    <div className="main-container-customer-page sideber-container-Mobile">
       <Sidebar />
       
       <div className="content-wrapper-customer-page">
@@ -434,6 +497,11 @@ const AllCustomer = () => {
             <button className="toast-close-customer-page" onClick={() => setToast({ show: false })}>×</button>
           </div>
         )}
+
+        {/* ✅ User Type Badge */}
+        <div className={`user-type-badge ${userType}`}>
+          {userType === "admin" ? "👑 Admin Mode" : `👤 ${userRole} Mode`}
+        </div>
 
         {/* Header */}
         <div className="page-header-customer-page">
@@ -463,13 +531,17 @@ const AllCustomer = () => {
             <button onClick={handleRefresh} className="refresh-btn-customer-page" title="Refresh">
               <MdOutlineRefresh className="btn-icon-customer-page" />
             </button>
-            <button 
-              className="add-customer-btn-customer-page"
-              onClick={() => navigate("/admin-add-customer")}
-            >
-              <FiPlus className="btn-icon-customer-page" />
-              Add New Customer
-            </button>
+            
+            {/* ✅ Add Customer Button - Only if user has permission */}
+            {canAddCustomer && (
+              <button 
+                className="add-customer-btn-customer-page"
+                onClick={handleAddCustomer}
+              >
+                <FiPlus className="btn-icon-customer-page" />
+                Add New Customer
+              </button>
+            )}
           </div>
         </div>
 
@@ -554,17 +626,20 @@ const AllCustomer = () => {
                     </div>
                   </div>
 
-                  {/* Conditional Actions - Grid me buttons, List me icons */}
+                  {/* ✅ Conditional Actions based on permissions */}
                   {viewMode === 'grid' ? (
                     /* Grid View - Buttons with Text */
                     <div className="customer-card-actions-customer-page grid-actions">
-                      <button
-                        className="action-btn-customer-page edit-btn-customer-page"
-                        onClick={(e) => handleEdit(e, customer)}
-                      >
-                        <FiEdit2 className="btn-icon-customer-page" />
-                        Edit
-                      </button>
+                      {canEditCustomer && (
+                        <button
+                          className="action-btn-customer-page edit-btn-customer-page"
+                          onClick={(e) => handleEdit(e, customer)}
+                        >
+                          <FiEdit2 className="btn-icon-customer-page" />
+                          Edit
+                        </button>
+                      )}
+                      
                       <button
                         className="action-btn-customer-page view-orders-btn-customer-page"
                         onClick={(e) => handleViewOrders(e, customer)}
@@ -572,6 +647,7 @@ const AllCustomer = () => {
                         <FiPackage className="btn-icon-customer-page" />
                         Orders
                       </button>
+                      
                       {hasOrders ? (
                         <button
                           className="action-btn-customer-page view-details-btn-customer-page"
@@ -581,25 +657,30 @@ const AllCustomer = () => {
                           Details
                         </button>
                       ) : (
-                        <button
-                          className="action-btn-customer-page order-btn-customer-page"
-                          onClick={(e) => handleCreateOrder(e, customer)}
-                        >
-                          <FiShoppingBag className="btn-icon-customer-page" />
-                          New Order
-                        </button>
+                        canCreateOrder && (
+                          <button
+                            className="action-btn-customer-page order-btn-customer-page"
+                            onClick={(e) => handleCreateOrder(e, customer)}
+                          >
+                            <FiShoppingBag className="btn-icon-customer-page" />
+                            New Order
+                          </button>
+                        )
                       )}
                     </div>
                   ) : (
                     /* List View - Icons Only */
                     <div className="customer-card-actions-customer-page list-actions">
-                      <button
-                        className="action-icon-customer-page edit-icon-customer-page"
-                        onClick={(e) => handleEdit(e, customer)}
-                        title="Edit Customer"
-                      >
-                        <FiEdit2 />
-                      </button>
+                      {canEditCustomer && (
+                        <button
+                          className="action-icon-customer-page edit-icon-customer-page"
+                          onClick={(e) => handleEdit(e, customer)}
+                          title="Edit Customer"
+                        >
+                          <FiEdit2 />
+                        </button>
+                      )}
+                      
                       <button
                         className="action-icon-customer-page orders-icon-customer-page"
                         onClick={(e) => handleViewOrders(e, customer)}
@@ -607,6 +688,7 @@ const AllCustomer = () => {
                       >
                         <FiPackage />
                       </button>
+                      
                       {hasOrders ? (
                         <button
                           className="action-icon-customer-page view-icon-customer-page"
@@ -616,13 +698,15 @@ const AllCustomer = () => {
                           <FiEye />
                         </button>
                       ) : (
-                        <button
-                          className="action-icon-customer-page order-icon-customer-page"
-                          onClick={(e) => handleCreateOrder(e, customer)}
-                          title="New Order"
-                        >
-                          <FiShoppingBag />
-                        </button>
+                        canCreateOrder && (
+                          <button
+                            className="action-icon-customer-page order-icon-customer-page"
+                            onClick={(e) => handleCreateOrder(e, customer)}
+                            title="New Order"
+                          >
+                            <FiShoppingBag />
+                          </button>
+                        )
                       )}
                     </div>
                   )}
@@ -721,6 +805,33 @@ const AllCustomer = () => {
                         ))}
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* ✅ Due Date Field - New Card */}
+                <div className="form-card-customer-page">
+                  <div className="form-card-header-customer-page">
+                    <FiCalendar className="form-card-icon-customer-page" />
+                    <h4>Due Date</h4>
+                  </div>
+                  
+                  <div className="input-group-customer-page">
+                    <label>
+                      <BsCalendar2Date className="input-icon-customer-page" />
+                      Due Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      name="dueDate"
+                      value={orderData.dueDate ? formatDateForInput(orderData.dueDate) : ''}
+                      onChange={handleInputChange}
+                      min={formatDateForInput(new Date())} // Can't select past dates
+                      className="order-date-input-customer-page"
+                      placeholder="Select due date"
+                    />
+                    <small className="field-hint-customer-page">
+                      Select the date by which this order should be completed
+                    </small>
                   </div>
                 </div>
 
@@ -845,6 +956,16 @@ const AllCustomer = () => {
                           <span>{selectedStatus.label}</span>
                         </div>
                       </div>
+                      {/* ✅ Add Due Date to Summary */}
+                      {orderData.dueDate && (
+                        <div className="summary-item-customer-page full-width-customer-page">
+                          <span className="summary-label-customer-page">Due Date</span>
+                          <div className="due-date-badge-customer-page">
+                            <FiCalendar className="due-date-icon-customer-page" />
+                            <span>{formatDate(orderData.dueDate)}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
