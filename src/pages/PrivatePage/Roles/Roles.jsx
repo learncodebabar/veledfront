@@ -2,15 +2,106 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import roleService from '../../../api/roleService';
 import Sidebar from '../../../components/Sidebar/Sidebar';
+import API from '../../../api/axios';
 import './Roles.css';
 
-// React Icons
+// React Icons - Main Icons
 import { 
   FaUserPlus, FaTimes, FaEye, FaEdit, FaTrash, 
   FaCheckCircle, FaExclamationCircle, FaSpinner,
   FaUserCircle, FaEnvelope, FaLock, FaCalendarAlt,
-  FaShieldAlt, FaSearch, FaUserTag, FaSave
+  FaShieldAlt, FaSearch, FaUserTag, FaSave,
+  FaLock as FaLockIcon, FaUnlock
 } from 'react-icons/fa';
+
+// React Icons - Fi Icons (صرف ضروری)
+import { 
+  FiHome,
+  FiUsers,
+  FiShoppingCart,
+  FiBriefcase,
+  FiCalendar,
+  FiFileText,
+  FiPackage,
+  FiDollarSign,
+  FiSettings,
+  FiUser,
+  FiEdit,
+  FiGrid,
+  FiList,
+  FiCheckCircle,
+  FiXCircle,
+  FiUserPlus,
+  FiEye,
+  FiFilePlus,
+  FiClock,
+  FiLogOut,
+  FiChevronDown,
+  FiChevronRight
+} from 'react-icons/fi';
+// ===== ALL PAGES LIST =====
+const ALL_PAGES = [
+  // Dashboard Pages
+  { id: 'admin-dashboard', name: 'Admin Dashboard', category: 'dashboard', icon: <FiHome /> },
+  { id: 'role-dashboard', name: 'Role Dashboard', category: 'dashboard', icon: <FiGrid /> },
+  
+  // Customer Pages
+  { id: 'add-customer', name: 'Add Customer (Admin)', category: 'customers', icon: <FiUserPlus /> },
+  { id: 'all-customers', name: 'All Customers (Admin)', category: 'customers', icon: <FiUsers /> },
+  { id: 'role-add-customer', name: 'Add Customer (Role)', category: 'customers', icon: <FiUserPlus /> },
+  { id: 'role-customers', name: 'View Customers (Role)', category: 'customers', icon: <FiUsers /> },
+  { id: 'customer-detail', name: 'Customer Detail', category: 'customers', icon: <FiUser /> },
+  { id: 'customer-orders', name: 'Customer Orders', category: 'customers', icon: <FiList /> },
+  
+  // Order Pages
+  { id: 'all-orders', name: 'All Orders (Admin)', category: 'orders', icon: <FiShoppingCart /> },
+  { id: 'role-orders', name: 'View Orders (Role)', category: 'orders', icon: <FiShoppingCart /> },
+  
+  // Labor Pages
+  { id: 'add-labor', name: 'Add Labor (Admin)', category: 'labor', icon: <FiBriefcase /> },
+  { id: 'all-labor', name: 'All Labor (Admin)', category: 'labor', icon: <FiUsers /> },
+  { id: 'role-add-labor', name: 'Add Labor (Role)', category: 'labor', icon: <FiBriefcase /> },
+  { id: 'role-labor', name: 'View Labor (Role)', category: 'labor', icon: <FiUsers /> },
+  { id: 'edit-labor', name: 'Edit Labor', category: 'labor', icon: <FiEdit /> },
+  { id: 'worker-details', name: 'Worker Details', category: 'labor', icon: <FiUser /> },
+  
+  // Attendance Pages
+  { id: 'attendance', name: 'Attendance (Admin)', category: 'attendance', icon: <FiCalendar /> },
+  { id: 'role-attendance', name: 'Attendance (Role)', category: 'attendance', icon: <FiCalendar /> },
+  
+  // Quotation Pages
+  { id: 'quotation-customer', name: 'Customer Quotations', category: 'quotations', icon: <FiFileText /> },
+  { id: 'all-quotations', name: 'All Quotations', category: 'quotations', icon: <FiFileText /> },
+  
+  // Material Pages
+  { id: 'admin-material', name: 'Material Management', category: 'material', icon: <FiPackage /> },
+  
+  // Payment & Expense Pages
+  { id: 'admin-payment', name: 'Payments (Admin)', category: 'financial', icon: <FiDollarSign /> },
+  { id: 'admin-expenses', name: 'Expenses (Admin)', category: 'financial', icon: <FiDollarSign /> },
+  { id: 'payments', name: 'Payments Overview', category: 'financial', icon: <FiDollarSign /> },
+  { id: 'expenses', name: 'Expenses Overview', category: 'financial', icon: <FiDollarSign /> },
+  
+  // Settings Pages
+  { id: 'roles-management', name: 'Role Management', category: 'settings', icon: <FiSettings /> },
+  { id: 'profile', name: 'Profile', category: 'settings', icon: <FiUser /> },
+  { id: 'account-settings', name: 'Account Settings', category: 'settings', icon: <FiSettings /> },
+  { id: 'theme-settings', name: 'Theme Settings', category: 'settings', icon: <FiSettings /> },
+  { id: 'profile-settings', name: 'Profile Settings', category: 'settings', icon: <FiUser /> }
+];
+
+// Categories with colors
+const CATEGORIES = {
+  dashboard: { name: 'Dashboard', color: '#4299e1', icon: <FiHome /> },
+  customers: { name: 'Customer Management', color: '#48bb78', icon: <FiUsers /> },
+  orders: { name: 'Order Management', color: '#ed8936', icon: <FiShoppingCart /> },
+  labor: { name: 'Labor Management', color: '#9f7aea', icon: <FiBriefcase /> },
+  attendance: { name: 'Attendance', color: '#f56565', icon: <FiCalendar /> },
+  quotations: { name: 'Quotations', color: '#38b2ac', icon: <FiFileText /> },
+  material: { name: 'Material', color: '#667eea', icon: <FiPackage /> },
+  financial: { name: 'Financial', color: '#fbbf24', icon: <FiDollarSign /> },
+  settings: { name: 'Settings', color: '#a0aec0', icon: <FiSettings /> }
+};
 
 const Roles = () => {
   const navigate = useNavigate();
@@ -20,16 +111,22 @@ const Roles = () => {
   
   // Modal States
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
+  const [modalMode, setModalMode] = useState('add');
   const [modalLoading, setModalLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   
-  // Form State - Separate variables for better performance
+  // Permissions Modal States
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState(null);
+  const [rolePermissions, setRolePermissions] = useState({});
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  
+  // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('manager'); // Default value
+  const [role, setRole] = useState('manager');
   const [status, setStatus] = useState('Active');
 
   // Toast State
@@ -42,12 +139,11 @@ const Roles = () => {
   // Field errors
   const [errors, setErrors] = useState({});
 
-  // Fetch roles on component mount
   useEffect(() => {
     fetchRoles();
   }, []);
 
-  // Fetch all roles
+  // ===== ROLE CRUD OPERATIONS =====
   const fetchRoles = async () => {
     try {
       setLoading(true);
@@ -60,19 +156,17 @@ const Roles = () => {
     }
   };
 
-  // Fetch single role by ID
   const fetchRoleById = async (roleId) => {
     try {
       setModalLoading(true);
       const response = await roleService.getRoleById(roleId);
       const roleData = response.role;
       
-      // Set form data
       setName(roleData.name || '');
       setEmail(roleData.email || '');
       setRole(roleData.role || 'manager');
       setStatus(roleData.status || 'Active');
-      setPassword(''); // Don't populate password for security
+      setPassword('');
       setConfirmPassword('');
       
       setSelectedRole(roleData);
@@ -83,7 +177,149 @@ const Roles = () => {
     }
   };
 
-  // Show toast message
+  // ===== PERMISSIONS OPERATIONS WITH ARRAY =====
+  const handleOpenPermissions = (role) => {
+    setSelectedRoleForPermissions(role);
+    fetchRolePermissions(role._id);
+    setShowPermissionsModal(true);
+  };
+
+  const fetchRolePermissions = async (roleId) => {
+    try {
+      setLoadingPermissions(true);
+      const response = await API.get(`/permissions/role/${roleId}`);
+      
+      // Permissions object banao
+      const perms = {};
+      if (response.data.permissions) {
+        response.data.permissions.forEach(p => {
+          if (p.canAccess) {
+            perms[p.pageId] = true;
+          }
+        });
+      }
+      
+      setRolePermissions(perms);
+      
+      // Role ka permissions array update karo
+      if (response.data.role) {
+        setSelectedRoleForPermissions(prev => ({
+          ...prev,
+          permissions: response.data.role.permissionsArray || []
+        }));
+      }
+      
+      console.log('Permissions Array:', response.data.role?.permissionsArray);
+      
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+      showToast('error', 'Failed to load permissions');
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  const handleTogglePermission = async (pageId, pageName) => {
+    try {
+      const response = await API.post('/permissions/toggle', {
+        roleId: selectedRoleForPermissions._id,
+        pageId,
+        pageName
+      });
+      
+      if (response.data.success) {
+        // Update permissions object
+        setRolePermissions(prev => ({
+          ...prev,
+          [pageId]: response.data.permission.canAccess
+        }));
+        
+        // Update selected role's permissions array
+        setSelectedRoleForPermissions(prev => ({
+          ...prev,
+          permissions: response.data.permissionsArray || []
+        }));
+        
+        showToast('success', response.data.message);
+        
+        console.log('Updated Permissions Array:', response.data.permissionsArray);
+      }
+    } catch (error) {
+      console.error('Error toggling permission:', error);
+      showToast('error', 'Failed to update permission');
+    }
+  };
+
+  const handleSelectAllInCategory = async (category) => {
+    const categoryPages = ALL_PAGES.filter(p => p.category === category);
+    const newPermissions = { ...rolePermissions };
+    const pageIds = [];
+    
+    categoryPages.forEach(page => {
+      newPermissions[page.id] = true;
+      pageIds.push(page.id);
+    });
+    
+    setRolePermissions(newPermissions);
+    
+    // Bulk update permissions
+    try {
+      const currentPerms = selectedRoleForPermissions.permissions || [];
+      const allPageIds = [...new Set([...currentPerms, ...pageIds])];
+      
+      const response = await API.post('/permissions/bulk', {
+        roleId: selectedRoleForPermissions._id,
+        pageIds: allPageIds
+      });
+      
+      if (response.data.success) {
+        setSelectedRoleForPermissions(prev => ({
+          ...prev,
+          permissions: response.data.permissionsArray || []
+        }));
+        showToast('success', `All ${category} pages selected`);
+      }
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      showToast('error', 'Failed to update permissions');
+    }
+  };
+
+  const handleDeselectAllInCategory = async (category) => {
+    const categoryPages = ALL_PAGES.filter(p => p.category === category);
+    const newPermissions = { ...rolePermissions };
+    const pageIdsToRemove = categoryPages.map(p => p.id);
+    
+    categoryPages.forEach(page => {
+      newPermissions[page.id] = false;
+    });
+    
+    setRolePermissions(newPermissions);
+    
+    // Bulk remove permissions
+    try {
+      const currentPerms = selectedRoleForPermissions.permissions || [];
+      const updatedPerms = currentPerms.filter(id => !pageIdsToRemove.includes(id));
+      
+      const response = await API.post('/permissions/bulk', {
+        roleId: selectedRoleForPermissions._id,
+        pageIds: updatedPerms
+      });
+      
+      if (response.data.success) {
+        setSelectedRoleForPermissions(prev => ({
+          ...prev,
+          permissions: response.data.permissionsArray || []
+        }));
+        showToast('success', `All ${category} pages deselected`);
+      }
+    } catch (error) {
+      console.error('Error in bulk update:', error);
+      showToast('error', 'Failed to update permissions');
+    }
+  };
+
+  // ===== HELPER FUNCTIONS =====
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
     setTimeout(() => {
@@ -91,7 +327,6 @@ const Roles = () => {
     }, 3000);
   };
 
-  // Reset form
   const resetForm = () => {
     setName('');
     setEmail('');
@@ -105,28 +340,24 @@ const Roles = () => {
     setSelectedRole(null);
   };
 
-  // Open modal for adding new role
   const openAddModal = () => {
     resetForm();
     setModalMode('add');
     setShowModal(true);
   };
 
-  // Open modal for viewing role
   const openViewModal = async (roleId) => {
     setModalMode('view');
     setShowModal(true);
     await fetchRoleById(roleId);
   };
 
-  // Open modal for editing role
   const openEditModal = async (roleId) => {
     setModalMode('edit');
     setShowModal(true);
     await fetchRoleById(roleId);
   };
 
-  // Validate form
   const validateForm = (isEditMode) => {
     const newErrors = {};
 
@@ -143,7 +374,6 @@ const Roles = () => {
       newErrors.email = 'Please enter a valid email';
     }
 
-    // Only validate password for add/edit mode, and only if password is provided
     if (!isEditMode || (isEditMode && password)) {
       if (password && password.length < 6) {
         newErrors.password = 'Password must be at least 6 characters';
@@ -160,7 +390,6 @@ const Roles = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle create submit
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     
@@ -179,13 +408,8 @@ const Roles = () => {
       };
 
       const response = await roleService.createRole(roleData);
-
       showToast('success', response.message || 'Role created successfully');
-      
-      // Refresh roles list
       await fetchRoles();
-      
-      // Close modal and reset form
       setShowModal(false);
       resetForm();
 
@@ -196,7 +420,6 @@ const Roles = () => {
     }
   };
 
-  // Handle update submit
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     
@@ -216,19 +439,13 @@ const Roles = () => {
         status: status
       };
 
-      // Only include password if it's provided
       if (password) {
         roleData.password = password;
       }
 
       const response = await roleService.updateRole(selectedRole._id, roleData);
-
       showToast('success', response.message || 'Role updated successfully');
-      
-      // Refresh roles list
       await fetchRoles();
-      
-      // Close modal and reset form
       setShowModal(false);
       resetForm();
 
@@ -239,17 +456,6 @@ const Roles = () => {
     }
   };
 
-  // Handle view role
-  const handleViewRole = (roleId) => {
-    openViewModal(roleId);
-  };
-
-  // Handle edit role
-  const handleEditRole = (roleId) => {
-    openEditModal(roleId);
-  };
-
-  // Handle delete role
   const handleDeleteRole = async (roleId) => {
     if (!window.confirm('Are you sure you want to delete this role?')) {
       return;
@@ -274,7 +480,6 @@ const Roles = () => {
     );
   });
 
-  // Format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-PK', {
@@ -284,7 +489,6 @@ const Roles = () => {
     });
   };
 
-  // Get modal title based on mode
   const getModalTitle = () => {
     switch(modalMode) {
       case 'add': return 'Add New Role';
@@ -295,19 +499,19 @@ const Roles = () => {
   };
 
   return (
-    <div className="roles-page   sideber-container-Mobile">
+    <div className="role-page-permission">
       <Sidebar />
       
-      <div className="roles-content">
+      <div className="role-page-permission-content">
         {/* Toast Message */}
         {toast.show && (
-          <div className={`roles-toast ${toast.type}`}>
-            <div className="roles-toast-content">
+          <div className={`role-page-permission-toast ${toast.type}`}>
+            <div className="role-page-permission-toast-content">
               {toast.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
               <span>{toast.message}</span>
             </div>
             <button 
-              className="roles-toast-close" 
+              className="role-page-permission-toast-close" 
               onClick={() => setToast({ ...toast, show: false })}
             >
               <FaTimes />
@@ -316,13 +520,13 @@ const Roles = () => {
         )}
 
         {/* Header */}
-        <div className="roles-header">
-          <div className="roles-header-left">
+        <div className="role-page-permission-header">
+          <div className="role-page-permission-header-left">
             <h1><FaShieldAlt /> Role Management</h1>
             <p>Manage system roles and permissions</p>
           </div>
           <button 
-            className="roles-add-btn"
+            className="role-page-permission-add-btn"
             onClick={openAddModal}
           >
             <FaUserPlus /> Add New Role
@@ -330,19 +534,19 @@ const Roles = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="roles-search-section">
-          <div className="roles-search-wrapper">
-            <FaSearch className="roles-search-icon" />
+        <div className="role-page-permission-search-section">
+          <div className="role-page-permission-search-wrapper">
+            <FaSearch className="role-page-permission-search-icon" />
             <input
               type="text"
-              className="roles-search-input"
+              className="role-page-permission-search-input"
               placeholder="Search by name, email or role..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
               <button 
-                className="roles-clear-search" 
+                className="role-page-permission-clear-search" 
                 onClick={() => setSearchTerm('')}
               >
                 <FaTimes />
@@ -352,34 +556,34 @@ const Roles = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="roles-stats-grid">
-          <div className="roles-stat-card">
-            <div className="roles-stat-icon total">
+        <div className="role-page-permission-stats-grid">
+          <div className="role-page-permission-stat-card">
+            <div className="role-page-permission-stat-icon total">
               <FaUserTag />
             </div>
-            <div className="roles-stat-info">
-              <span className="roles-stat-label">Total Roles</span>
-              <span className="roles-stat-value">{roles.length}</span>
+            <div className="role-page-permission-stat-info">
+              <span className="role-page-permission-stat-label">Total Roles</span>
+              <span className="role-page-permission-stat-value">{roles.length}</span>
             </div>
           </div>
-          <div className="roles-stat-card">
-            <div className="roles-stat-icon active">
+          <div className="role-page-permission-stat-card">
+            <div className="role-page-permission-stat-icon active">
               <FaShieldAlt />
             </div>
-            <div className="roles-stat-info">
-              <span className="roles-stat-label">Active Roles</span>
-              <span className="roles-stat-value">
+            <div className="role-page-permission-stat-info">
+              <span className="role-page-permission-stat-label">Active Roles</span>
+              <span className="role-page-permission-stat-value">
                 {roles.filter(r => r.status !== 'Inactive').length}
               </span>
             </div>
           </div>
-          <div className="roles-stat-card">
-            <div className="roles-stat-icon pending">
+          <div className="role-page-permission-stat-card">
+            <div className="role-page-permission-stat-icon pending">
               <FaCalendarAlt />
             </div>
-            <div className="roles-stat-info">
-              <span className="roles-stat-label">Created Today</span>
-              <span className="roles-stat-value">
+            <div className="role-page-permission-stat-info">
+              <span className="role-page-permission-stat-label">Created Today</span>
+              <span className="role-page-permission-stat-value">
                 {roles.filter(r => {
                   const today = new Date().toDateString();
                   return new Date(r.createdAt).toDateString() === today;
@@ -391,12 +595,12 @@ const Roles = () => {
 
         {/* Roles Table */}
         {loading ? (
-          <div className="roles-loading-state">
-            <div className="roles-spinner"></div>
+          <div className="role-page-permission-loading-state">
+            <div className="role-page-permission-spinner"></div>
             <p>Loading roles...</p>
           </div>
         ) : filteredRoles.length === 0 ? (
-          <div className="roles-empty-state">
+          <div className="role-page-permission-empty-state">
             <FaUserCircle size={60} />
             <h3>No roles found</h3>
             <p>
@@ -406,7 +610,7 @@ const Roles = () => {
             </p>
             {searchTerm && (
               <button 
-                className="roles-clear-btn" 
+                className="role-page-permission-clear-btn" 
                 onClick={() => setSearchTerm('')}
               >
                 <FaTimes /> Clear Search
@@ -414,8 +618,8 @@ const Roles = () => {
             )}
           </div>
         ) : (
-          <div className="roles-table-wrapper">
-            <table className="roles-table">
+          <div className="role-page-permission-table-wrapper">
+            <table className="role-page-permission-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -431,11 +635,11 @@ const Roles = () => {
                 {filteredRoles.map((roleItem, index) => (
                   <tr key={roleItem._id}>
                     <td>
-                      <span className="roles-id-badge">{index + 1}</span>
+                      <span className="role-page-permission-id-badge">{index + 1}</span>
                     </td>
                     <td>
-                      <div className="roles-name-cell">
-                        <span className="roles-avatar">
+                      <div className="role-page-permission-name-cell">
+                        <span className="role-page-permission-avatar">
                           {roleItem.name?.charAt(0).toUpperCase()}
                         </span>
                         <span>{roleItem.name}</span>
@@ -443,34 +647,41 @@ const Roles = () => {
                     </td>
                     <td>{roleItem.email}</td>
                     <td>
-                      <span className={`roles-role-badge ${roleItem.role || 'user'}`}>
+                      <span className={`role-page-permission-role-badge ${roleItem.role || 'user'}`}>
                         {roleItem.role || 'User'}
                       </span>
                     </td>
                     <td>
-                      <span className={`roles-status-badge ${roleItem.status?.toLowerCase() || 'active'}`}>
+                      <span className={`role-page-permission-status-badge ${roleItem.status?.toLowerCase() || 'active'}`}>
                         {roleItem.status || 'Active'}
                       </span>
                     </td>
                     <td>{formatDate(roleItem.createdAt)}</td>
                     <td>
-                      <div className="roles-actions">
+                      <div className="role-page-permission-actions">
                         <button 
-                          className="roles-action-btn view"
-                          onClick={() => handleViewRole(roleItem._id)}
+                          className="role-page-permission-action-btn view"
+                          onClick={() => openViewModal(roleItem._id)}
                           title="View Details"
                         >
                           <FaEye />
                         </button>
                         <button 
-                          className="roles-action-btn edit"
-                          onClick={() => handleEditRole(roleItem._id)}
+                          className="role-page-permission-action-btn edit"
+                          onClick={() => openEditModal(roleItem._id)}
                           title="Edit Role"
                         >
                           <FaEdit />
                         </button>
                         <button 
-                          className="roles-action-btn delete"
+                          className="role-page-permission-action-btn permissions"
+                          onClick={() => handleOpenPermissions(roleItem)}
+                          title="Manage Page Permissions"
+                        >
+                          <FaShieldAlt />
+                        </button>
+                        <button 
+                          className="role-page-permission-action-btn delete"
                           onClick={() => handleDeleteRole(roleItem._id)}
                           title="Delete Role"
                         >
@@ -488,7 +699,7 @@ const Roles = () => {
         {/* Role Modal - Add/Edit/View */}
         {showModal && (
           <div 
-            className="roles-modal-overlay" 
+            className="role-page-permission-modal-overlay" 
             onClick={() => {
               if (!modalLoading) {
                 setShowModal(false);
@@ -497,17 +708,17 @@ const Roles = () => {
             }}
           >
             <div 
-              className="roles-modal-content"
+              className="role-page-permission-modal-content"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="roles-modal-header">
+              <div className="role-page-permission-modal-header">
                 <h3>
                   {modalMode === 'add' && <><FaUserPlus /> {getModalTitle()}</>}
                   {modalMode === 'edit' && <><FaEdit /> {getModalTitle()}</>}
                   {modalMode === 'view' && <><FaEye /> {getModalTitle()}</>}
                 </h3>
                 <button 
-                  className="roles-modal-close"
+                  className="role-page-permission-modal-close"
                   onClick={() => {
                     if (!modalLoading) {
                       setShowModal(false);
@@ -521,10 +732,9 @@ const Roles = () => {
               </div>
 
               <form onSubmit={modalMode === 'add' ? handleCreateSubmit : handleUpdateSubmit}>
-                <div className="roles-modal-body">
-                  {/* Loading State for Modal */}
+                <div className="role-page-permission-modal-body">
                   {modalLoading && (
-                    <div className="roles-modal-loading">
+                    <div className="role-page-permission-modal-loading">
                       <FaSpinner className="spinning" />
                       <p>Loading...</p>
                     </div>
@@ -532,8 +742,7 @@ const Roles = () => {
 
                   {!modalLoading && (
                     <>
-                      {/* Name Field */}
-                      <div className="roles-form-group">
+                      <div className="role-page-permission-form-group">
                         <label>
                           <FaUserCircle /> Full Name 
                           {modalMode !== 'view' && <span className="required">*</span>}
@@ -550,8 +759,7 @@ const Roles = () => {
                         {errors.name && <small className="error-text">{errors.name}</small>}
                       </div>
 
-                      {/* Email Field */}
-                      <div className="roles-form-group">
+                      <div className="role-page-permission-form-group">
                         <label>
                           <FaEnvelope /> Email Address 
                           {modalMode !== 'view' && <span className="required">*</span>}
@@ -568,8 +776,7 @@ const Roles = () => {
                         {errors.email && <small className="error-text">{errors.email}</small>}
                       </div>
 
-                      {/* Role Type Field */}
-                      <div className="roles-form-group">
+                      <div className="role-page-permission-form-group">
                         <label>
                           <FaShieldAlt /> Role Type
                           {modalMode !== 'view' && <span className="optional">(Optional)</span>}
@@ -578,7 +785,7 @@ const Roles = () => {
                           value={role}
                           onChange={(e) => setRole(e.target.value)}
                           disabled={modalLoading || modalMode === 'view'}
-                          className="roles-select"
+                          className="role-page-permission-select"
                         >
                           <option value="admin">Admin</option>
                           <option value="manager">Manager</option>
@@ -587,15 +794,14 @@ const Roles = () => {
                         </select>
                       </div>
 
-                      {/* Status Field - Only for Edit/View */}
                       {(modalMode === 'edit' || modalMode === 'view') && (
-                        <div className="roles-form-group">
+                        <div className="role-page-permission-form-group">
                           <label>
                             <FaShieldAlt /> Status
                           </label>
                           {modalMode === 'view' ? (
-                            <div className="roles-view-field">
-                              <span className={`roles-status-badge ${status?.toLowerCase()}`}>
+                            <div className="role-page-permission-view-field">
+                              <span className={`role-page-permission-status-badge ${status?.toLowerCase()}`}>
                                 {status}
                               </span>
                             </div>
@@ -604,7 +810,7 @@ const Roles = () => {
                               value={status}
                               onChange={(e) => setStatus(e.target.value)}
                               disabled={modalLoading}
-                              className="roles-select"
+                              className="role-page-permission-select"
                             >
                               <option value="Active">Active</option>
                               <option value="Inactive">Inactive</option>
@@ -614,17 +820,15 @@ const Roles = () => {
                         </div>
                       )}
 
-                      {/* Password Fields - Only for Add/Edit */}
                       {modalMode !== 'view' && (
                         <>
-                          {/* Password Field */}
-                          <div className="roles-form-group">
+                          <div className="role-page-permission-form-group">
                             <label>
                               <FaLock /> Password 
                               {modalMode === 'add' && <span className="required">*</span>}
                               {modalMode === 'edit' && <span className="optional">(Leave blank to keep current)</span>}
                             </label>
-                            <div className="roles-password-wrapper">
+                            <div className="role-page-permission-password-wrapper">
                               <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
@@ -635,7 +839,7 @@ const Roles = () => {
                               />
                               <button
                                 type="button"
-                                className="roles-password-toggle"
+                                className="role-page-permission-password-toggle"
                                 onClick={() => setShowPassword(!showPassword)}
                                 disabled={modalLoading}
                               >
@@ -645,13 +849,12 @@ const Roles = () => {
                             {errors.password && <small className="error-text">{errors.password}</small>}
                           </div>
 
-                          {/* Confirm Password Field */}
-                          <div className="roles-form-group">
+                          <div className="role-page-permission-form-group">
                             <label>
                               <FaLock /> Confirm Password 
                               {(modalMode === 'add' || (modalMode === 'edit' && password)) && <span className="required">*</span>}
                             </label>
-                            <div className="roles-password-wrapper">
+                            <div className="role-page-permission-password-wrapper">
                               <input
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 value={confirmPassword}
@@ -662,7 +865,7 @@ const Roles = () => {
                               />
                               <button
                                 type="button"
-                                className="roles-password-toggle"
+                                className="role-page-permission-password-toggle"
                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 disabled={modalLoading}
                               >
@@ -674,20 +877,25 @@ const Roles = () => {
                         </>
                       )}
 
-                      {/* View Mode - Display Data */}
                       {modalMode === 'view' && selectedRole && (
-                        <div className="roles-view-section">
-                          <div className="roles-view-row">
-                            <span className="roles-view-label">Role ID:</span>
-                            <span className="roles-view-value">{selectedRole._id}</span>
+                        <div className="role-page-permission-view-section">
+                          <div className="role-page-permission-view-row">
+                            <span className="role-page-permission-view-label">Role ID:</span>
+                            <span className="role-page-permission-view-value">{selectedRole._id}</span>
                           </div>
-                          <div className="roles-view-row">
-                            <span className="roles-view-label">Created At:</span>
-                            <span className="roles-view-value">{formatDate(selectedRole.createdAt)}</span>
+                          <div className="role-page-permission-view-row">
+                            <span className="role-page-permission-view-label">Created At:</span>
+                            <span className="role-page-permission-view-value">{formatDate(selectedRole.createdAt)}</span>
                           </div>
-                          <div className="roles-view-row">
-                            <span className="roles-view-label">Last Updated:</span>
-                            <span className="roles-view-value">{formatDate(selectedRole.updatedAt)}</span>
+                          <div className="role-page-permission-view-row">
+                            <span className="role-page-permission-view-label">Last Updated:</span>
+                            <span className="role-page-permission-view-value">{formatDate(selectedRole.updatedAt)}</span>
+                          </div>
+                          <div className="role-page-permission-view-row">
+                            <span className="role-page-permission-view-label">Permissions Array:</span>
+                            <span className="role-page-permission-view-value">
+                              {selectedRole.permissions?.length || 0} pages
+                            </span>
                           </div>
                         </div>
                       )}
@@ -695,11 +903,10 @@ const Roles = () => {
                   )}
                 </div>
 
-                {/* Modal Footer - Different buttons based on mode */}
-                <div className="roles-modal-footer">
+                <div className="role-page-permission-modal-footer">
                   <button
                     type="button"
-                    className="roles-cancel-btn"
+                    className="role-page-permission-cancel-btn"
                     onClick={() => {
                       if (!modalLoading) {
                         setShowModal(false);
@@ -714,7 +921,7 @@ const Roles = () => {
                   {modalMode !== 'view' && (
                     <button
                       type="submit"
-                      className="roles-submit-btn"
+                      className="role-page-permission-submit-btn"
                       disabled={modalLoading}
                     >
                       {modalLoading ? (
@@ -726,6 +933,145 @@ const Roles = () => {
                   )}
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ===== PERMISSIONS MODAL WITH TOGGLE SWITCH ===== */}
+        {showPermissionsModal && selectedRoleForPermissions && (
+          <div className="role-page-permission-modal-overlay" onClick={() => setShowPermissionsModal(false)}>
+            <div className="role-page-permission-modal-content permissions-modal" onClick={e => e.stopPropagation()}>
+              <div className="role-page-permission-permissions-header">
+                <h3>
+                  <FaShieldAlt /> Manage Permissions
+                </h3>
+                <button className="role-page-permission-modal-close" onClick={() => setShowPermissionsModal(false)}>
+                  <FaTimes />
+                </button>
+              </div>
+              
+              <div className="role-page-permission-permissions-body">
+                <div className="role-page-permission-role-info">
+                  <div>
+                    <h4>{selectedRoleForPermissions.name}</h4>
+                    <p className="role-email">{selectedRoleForPermissions.email}</p>
+                    
+                    {/* Permissions Array Display */}
+                    <div className="role-page-permission-array-box">
+                      <div className="role-page-permission-array-header">
+                        <span className="array-label">Permissions Array:</span>
+                        <span className="array-count">
+                          {selectedRoleForPermissions.permissions?.length || 0} pages
+                        </span>
+                      </div>
+                      
+                      {selectedRoleForPermissions.permissions?.length > 0 ? (
+                        <div className="role-page-permission-array-items">
+                          {selectedRoleForPermissions.permissions.slice(0, 5).map((perm, idx) => (
+                            <span key={idx} className="role-page-permission-array-item" title={perm}>
+                              {perm.length > 15 ? perm.substring(0, 12) + '...' : perm}
+                            </span>
+                          ))}
+                          {selectedRoleForPermissions.permissions.length > 5 && (
+                            <span className="role-page-permission-array-item more">
+                              +{selectedRoleForPermissions.permissions.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="role-page-permission-array-empty">No permissions in array</p>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`role-page-permission-role-type-badge ${selectedRoleForPermissions.role}`}>
+                    {selectedRoleForPermissions.role}
+                  </span>
+                </div>
+                
+                {loadingPermissions ? (
+                  <div className="role-page-permission-permissions-loading">
+                    <FaSpinner className="spinning" />
+                    <p>Loading permissions...</p>
+                  </div>
+                ) : (
+                  <div className="role-page-permission-permissions-list">
+                    {Object.keys(CATEGORIES).map(catKey => {
+                      const category = CATEGORIES[catKey];
+                      const categoryPages = ALL_PAGES.filter(p => p.category === catKey);
+                      
+                      if (categoryPages.length === 0) return null;
+                      
+                      const selectedCount = categoryPages.filter(p => rolePermissions[p.id]).length;
+                      
+                      return (
+                        <div key={catKey} className="role-page-permission-category">
+                          <div className="role-page-permission-category-header" style={{ borderLeftColor: category.color }}>
+                            <div className="role-page-permission-category-info">
+                              <span className="role-page-permission-category-icon">
+                                {category.icon}
+                              </span>
+                              <h4>{category.name}</h4>
+                              <span className="role-page-permission-category-count">
+                                ({selectedCount}/{categoryPages.length})
+                              </span>
+                            </div>
+                            
+                            <div className="role-page-permission-category-actions">
+                              <button 
+                                className="role-page-permission-select-all-btn"
+                                onClick={() => handleSelectAllInCategory(catKey)}
+                                title="Select All"
+                              >
+                                All
+                              </button>
+                              <button 
+                                className="role-page-permission-select-none-btn"
+                                onClick={() => handleDeselectAllInCategory(catKey)}
+                                title="Select None"
+                              >
+                                None
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="role-page-permission-category-pages">
+                            {categoryPages.map(page => (
+                              <div key={page.id} className="role-page-permission-permission-item">
+                                <div className="role-page-permission-page-info">
+                                  <span className="role-page-permission-page-icon">
+                                    {page.icon}
+                                  </span>
+                                  <span className="role-page-permission-page-name">{page.name}</span>
+                                </div>
+                                
+                                <div className="role-page-permission-permission-action">
+                                  <span className={`role-page-permission-permission-status ${rolePermissions[page.id] ? 'granted' : ''}`}>
+                                    {rolePermissions[page.id] ? 'On' : 'Off'}
+                                  </span>
+                                  <label className="role-page-permission-toggle-switch">
+                                    <input
+                                      type="checkbox"
+                                      checked={rolePermissions[page.id] || false}
+                                      onChange={() => handleTogglePermission(page.id, page.name)}
+                                    />
+                                    <span className="role-page-permission-toggle-slider"></span>
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              <div className="role-page-permission-permissions-footer">
+                <button className="role-page-permission-btn-done" onClick={() => setShowPermissionsModal(false)}>
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         )}

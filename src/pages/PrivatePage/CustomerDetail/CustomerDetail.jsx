@@ -4,13 +4,13 @@ import { FaUserLarge } from "react-icons/fa6";
 
 import "./CustomerDetail.css";
 import Sidebar from "../../../components/Sidebar/Sidebar";
-import { getCustomerById, getCustomerJobs } from "../../../api/customerApi"; // यूआरएल सही करें
+import { getCustomerById } from "../../../api/customerApi";
 
 const CustomerDetail = () => {
   const { id } = useParams();
 
   const [customer, setCustomer] = useState(null);
-  const [jobs, setJobs] = useState([]); // हमेशा array initialize करें
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -23,43 +23,44 @@ const CustomerDetail = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch both customer and jobs data in parallel
-      const [customerResponse, jobsResponse] = await Promise.all([
-        getCustomerById(id),
-        getCustomerJobs(id)
-      ]);
-
-      // Handle customer data
-      const customerData = customerResponse.data;
-      if (customerData.customer) {
-        setCustomer(customerData.customer);
+      // Fetch customer data with jobs included
+      const response = await getCustomerById(id);
+      console.log('Customer Detail Response:', response);
+      
+      // Handle response based on structure
+      if (response.success) {
+        // New response structure with success flag
+        setCustomer(response.customer);
+        setJobs(response.jobs || []);
+      } else if (response.customer) {
+        // Response with customer and jobs but no success flag
+        setCustomer(response.customer);
+        setJobs(response.jobs || []);
       } else {
-        setCustomer(customerData);
-      }
-
-      // FIX: Ensure jobs is always an array
-      const jobsData = jobsResponse.data;
-      if (Array.isArray(jobsData)) {
-        setJobs(jobsData);
-      } else if (jobsData && jobsData.jobs && Array.isArray(jobsData.jobs)) {
-        // अगर response { jobs: [...] } फॉर्मैट में है
-        setJobs(jobsData.jobs);
-      } else {
-        // अगर कुछ और है तो empty array set करें
-        console.warn("Jobs data is not an array:", jobsData);
+        // Direct customer object
+        setCustomer(response);
         setJobs([]);
       }
       
     } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.response?.data?.message || "Failed to fetch customer data");
+      console.error("Error fetching customer data:", err);
+      
+      // Handle different error types
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Please login again.");
+      } else if (err.response?.status === 404) {
+        setError("Customer not found.");
+      } else {
+        setError(err.response?.data?.message || "Failed to fetch customer data");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (amount) => {
-    return `Rs ${amount?.toLocaleString("en-PK") || 0}`;
+    if (!amount && amount !== 0) return "Rs 0";
+    return `Rs ${Number(amount).toLocaleString("en-PK")}`;
   };
 
   // Check if job has any estimated amounts
@@ -71,13 +72,26 @@ const CustomerDetail = () => {
     );
   };
 
+  // Calculate work subtotal
+  const calculateWorkSubtotal = (work) => {
+    if (!work.materials || work.materials.length === 0) return 0;
+    
+    const materialsTotal = work.materials.reduce(
+      (sum, m) => sum + (m.total || 0),
+      0
+    );
+    
+    return materialsTotal * (work.qty || 1);
+  };
+
   // Loading state
   if (loading) {
     return (
       <div className="main-container-CustomerDetail">
         <Sidebar />
         <div className="content-wrapper-CustomerDetail loading-container">
-          <h2>Loading...</h2>
+          <div className="loading-spinner"></div>
+          <h2>Loading Customer Details...</h2>
         </div>
       </div>
     );
@@ -89,7 +103,8 @@ const CustomerDetail = () => {
       <div className="main-container-CustomerDetail sideber-container-Mobile">
         <Sidebar />
         <div className="content-wrapper-CustomerDetail error-container">
-          <h2>Error: {error}</h2>
+          <h2>Error</h2>
+          <p>{error}</p>
           <button onClick={fetchCustomerData} className="retry-button">
             Try Again
           </button>
@@ -120,12 +135,12 @@ const CustomerDetail = () => {
         <div className="customer-info-card">
           <div className="customer-info-header">
             <span className="customer-icon"><FaUserLarge /></span>
-            <h2>{customer.name}</h2>
+            <h2>{customer.name || "Unnamed Customer"}</h2>
           </div>
           <div className="customer-info-body">
             <div className="info-row">
               <span className="info-label">Phone:</span>
-              <span className="info-value">{customer.phone}</span>
+              <span className="info-value">{customer.phone || "Not provided"}</span>
             </div>
             <div className="info-row">
               <span className="info-label">Address:</span>
@@ -135,7 +150,7 @@ const CustomerDetail = () => {
             </div>
             <div className="info-row">
               <span className="info-label">Customer ID:</span>
-              <span className="info-value">{customer._id}</span>
+              <span className="info-value">{customer._id || "N/A"}</span>
             </div>
           </div>
         </div>
@@ -145,7 +160,7 @@ const CustomerDetail = () => {
           <div className="projects-header">
             <h2>Projects / Works</h2>
             {jobs.length > 0 && (
-              <span className="projects-count">{jobs.length} projects</span>
+              <span className="projects-count">{jobs.length} project{jobs.length > 1 ? 's' : ''}</span>
             )}
           </div>
 
@@ -158,10 +173,10 @@ const CustomerDetail = () => {
               <div key={job._id || jobIndex} className="job-card">
                 <div className="job-header">
                   <div className="job-title">
-                    <h3>Bill #{job.billNumber}</h3>
+                    <h3>Bill #{job.billNumber || job._id?.slice(-6) || 'N/A'}</h3>
                   </div>
                   <div className="job-date">
-                    <span>{new Date(job.date).toLocaleDateString()}</span>
+                    <span>{job.date ? new Date(job.date).toLocaleDateString() : 'Date N/A'}</span>
                   </div>
                 </div>
 
@@ -198,11 +213,11 @@ const CustomerDetail = () => {
                       <div key={workIndex} className="work-item">
                         <div className="work-header">
                           <div className="work-title">
-                            <h4>{work.name}</h4>
+                            <h4>{work.name || 'Unnamed Work'}</h4>
                           </div>
                           <div className="work-quantity">
                             <span>Quantity:</span>
-                            <span className="quantity-badge">{work.qty}</span>
+                            <span className="quantity-badge">{work.qty || 1}</span>
                           </div>
                         </div>
 
@@ -224,11 +239,11 @@ const CustomerDetail = () => {
                               <tbody>
                                 {work.materials.map((mat, matIndex) => (
                                   <tr key={matIndex}>
-                                    <td>{mat.name}</td>
-                                    <td>{mat.qty}</td>
-                                    <td>{formatCurrency(mat.rate)}</td>
+                                    <td>{mat.name || 'N/A'}</td>
+                                    <td>{mat.qty || 0}</td>
+                                    <td>{formatCurrency(mat.rate || 0)}</td>
                                     <td className="total-column">
-                                      {formatCurrency(mat.total)}
+                                      {formatCurrency(mat.total || 0)}
                                     </td>
                                   </tr>
                                 ))}
@@ -238,12 +253,7 @@ const CustomerDetail = () => {
                             <div className="work-subtotal">
                               <span>Work Subtotal:</span>
                               <span className="subtotal-amount">
-                                {formatCurrency(
-                                  work.materials.reduce(
-                                    (sum, m) => sum + (m.total || 0),
-                                    0
-                                  ) * (work.qty || 1)
-                                )}
+                                {formatCurrency(calculateWorkSubtotal(work))}
                               </span>
                             </div>
                           </div>
@@ -265,7 +275,7 @@ const CustomerDetail = () => {
                   <div className="total-row">
                     <span>Grand Total:</span>
                     <span className="grand-total-amount">
-                      {formatCurrency(job.total)}
+                      {formatCurrency(job.total || 0)}
                     </span>
                   </div>
                 </div>
