@@ -1,0 +1,86 @@
+/* PrintQuotation.css */
+
+.print-quotation-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.print-quotation-error {
+  text-align: center;
+  padding: 50px;
+  background: white;
+  margin: 50px auto;
+  max-width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.print-quotation-error h2 {
+  color: #f44336;
+  margin-bottom: 20px;
+}
+
+.print-quotation-error button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Print styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+  
+  body {
+    background: white;
+  }
+  
+  .print-quotation-container {
+    padding: 0;
+  }
+  
+  .print-quotation-content {
+    padding: 0;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure colors print properly */
+  .quotation-status {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .estimate-box.low,
+  .estimate-box.medium,
+  .estimate-box.high {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
