@@ -9,7 +9,7 @@ import {
 import Sidebar from '../../../components/Sidebar/Sidebar';
 import { getAllQuotations, deleteQuotation } from '../../../api/quotationApi';
 import './Quotations.css';
-
+//hell
 const AllQuotations = () => {
   const navigate = useNavigate();
   
