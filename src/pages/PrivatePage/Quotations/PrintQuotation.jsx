@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiPrinter, FiDownload, FiArrowLeft, FiAlertCircle, FiTrendingUp, FiImage, FiX, FiEdit2 } from 'react-icons/fi';
 import { getQuotationById } from '../../../api/quotationApi';
+import api from '../../../api/axios';
 
 /* ─────────────────────────────────────────────────────────────
    ALL STYLES  — no external CSS file needed
@@ -30,7 +31,8 @@ const GLOBAL_CSS = `
     font-family: 'Open Sans', Arial, sans-serif;
     transition: filter 0.15s, transform 0.15s;
   }
-  .pq-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .pq-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+  .pq-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .pq-btn--gray  { background: #607d8b; color: #fff; }
   .pq-btn--blue  { background: #1565C0; color: #fff; }
   .pq-btn--green { background: #2e7d32; color: #fff; }
@@ -459,14 +461,15 @@ const GLOBAL_CSS = `
    COMPONENT
 ═══════════════════════════════════════════════════════════ */
 const PrintQuotation = () => {
-  const { id }   = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const printRef = useRef();
 
-  const [quotation,   setQuotation]   = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
-  const [showCost,    setShowCost]    = useState(true);
+  const [quotation, setQuotation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
+  const [error, setError] = useState(null);
+  const [showCost, setShowCost] = useState(true);
   const [companyLogo, setCompanyLogo] = useState(null);
   const [brandName, setBrandName] = useState('Haider Velding Wala');
   const [logoError, setLogoError] = useState(false);
@@ -593,6 +596,89 @@ const PrintQuotation = () => {
     setShowSignatureModal(false);
   };
 
+  /* ── Print Functions ── */
+  const handlePrint = async () => {
+    try {
+      setPrinting(true);
+      const mode = 'with-cost';
+      const response = await api.get(`/quotations/print/${id}/${mode}`, {
+        responseType: 'blob'
+      });
+      
+      // Create blob URL for the PDF
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open in new window and print
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      
+      // Clean up
+      setTimeout(() => window.URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Error printing with cost:', error);
+      alert('Failed to print. Please try again.');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handlePrintWithoutCost = async () => {
+    try {
+      setPrinting(true);
+      const response = await api.get(`/quotations/print/${id}/without-cost`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, '_blank');
+      
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      
+      setTimeout(() => window.URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Error printing without cost:', error);
+      alert('Failed to print. Please try again.');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setPrinting(true);
+      const mode = showCost ? 'with-cost' : 'without-cost';
+      const response = await api.get(`/quotations/print/${id}/${mode}`, {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `quotation-${quotation?.quotationNumber || id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please try again.');
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   /* ── Helpers ── */
   const formatCurrency = (amount) => {
     if (!amount && amount !== 0) return '0.00';
@@ -611,23 +697,6 @@ const PrintQuotation = () => {
     } catch {
       return 'Invalid Date';
     }
-  };
-
-  /* ── Print handlers ── */
-  const handlePrint = () => window.print();
-
-  const handlePrintWithoutCost = () => {
-    setShowCost(false);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => setShowCost(true), 500);
-    }, 100);
-  };
-
-  const handleDownloadPDF = () => {
-    const base = process.env.VITE_API_URL ;
-    const mode = showCost ? 'with-cost' : 'without-cost';
-    window.open(`${base}/quotations/print/${id}/${mode}`, '_blank');
   };
 
   const colCount = showCost ? 4 : 2;
@@ -745,23 +814,23 @@ const PrintQuotation = () => {
 
       {/* ══ ACTION BAR (hidden on print) ══ */}
       <div className="pq-action-bar">
-        <button className="pq-btn pq-btn--gray" onClick={() => navigate('/all-Quotation')}>
+        <button className="pq-btn pq-btn--gray" onClick={() => navigate('/all-Quotation')} disabled={printing}>
           <FiArrowLeft /> Back
         </button>
         <div className="action-group">
-          <button className="pq-btn pq-btn--orange" onClick={handleLogoClick}>
+          <button className="pq-btn pq-btn--orange" onClick={handleLogoClick} disabled={printing}>
             <FiImage /> Company Settings
           </button>
-          <button className="pq-btn pq-btn--purple" onClick={handleSignatureClick}>
+          <button className="pq-btn pq-btn--purple" onClick={handleSignatureClick} disabled={printing}>
             <FiEdit2 /> Signatures
           </button>
-          <button className="pq-btn pq-btn--blue" onClick={handlePrint}>
-            <FiPrinter /> Print with Cost
+          <button className="pq-btn pq-btn--blue" onClick={handlePrint} disabled={printing}>
+            {printing ? 'Processing...' : <><FiPrinter /> Print with Cost</>}
           </button>
-          <button className="pq-btn pq-btn--green" onClick={handlePrintWithoutCost}>
+          <button className="pq-btn pq-btn--green" onClick={handlePrintWithoutCost} disabled={printing}>
             <FiPrinter /> Print without Cost
           </button>
-          <button className="pq-btn pq-btn--blue" onClick={handleDownloadPDF}>
+          <button className="pq-btn pq-btn--blue" onClick={handleDownloadPDF} disabled={printing}>
             <FiDownload /> Download PDF
           </button>
         </div>
@@ -869,7 +938,7 @@ const PrintQuotation = () => {
                         {item.notes && (
                           <span className="tr-item-notes">— {item.notes}</span>
                         )}
-                      </td>
+                       </td>
                     </tr>
 
                     {/* Material rows */}
@@ -908,7 +977,7 @@ const PrintQuotation = () => {
                     <td>&nbsp;</td>
                     {showCost && <td>&nbsp;</td>}
                     {showCost && <td>&nbsp;</td>}
-                   </tr>
+                  </tr>
                 ))
               )}
             </tbody>
