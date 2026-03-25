@@ -625,7 +625,7 @@ const PrintQuotation = () => {
   };
 
   const handleDownloadPDF = () => {
-    const base = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const base = process.env.VITE_API_URL ;
     const mode = showCost ? 'with-cost' : 'without-cost';
     window.open(`${base}/quotations/print/${id}/${mode}`, '_blank');
   };
