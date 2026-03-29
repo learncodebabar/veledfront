@@ -92,6 +92,16 @@ export const canPerformAction = (allowedRoles = []) => {
 
 // ==================== ORDER APIS ====================
 
+export const createOrderFromQuotation = async (orderData) => {
+  try {
+    console.log('📤 Creating order from quotation:', orderData);
+    const response = await API.post('/orders/from-quotation', orderData);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Create order from quotation error:', error);
+    throw error;
+  }
+};
 // ✅ Create Order
 export const createOrder = async (orderData) => {
   try {

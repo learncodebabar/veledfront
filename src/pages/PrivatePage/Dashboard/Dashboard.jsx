@@ -3,16 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   FiDollarSign, FiPackage, FiTrendingUp, FiUsers,
   FiCalendar, FiFilter, FiDownload, FiRefreshCw,
-  FiPlusCircle, FiX, FiSave, FiCreditCard
+  FiPlusCircle, FiX, FiSave, FiCreditCard, FiClock,
+  FiCheckCircle, FiAlertCircle, FiShoppingBag,
+  FiUser, FiBox, FiActivity, FiBarChart2
 } from 'react-icons/fi';
 import {
   BsCurrencyRupee, BsBoxSeam, BsGraphUp, BsPeople,
-  BsTruck, BsWallet2, BsCashStack
+  BsTruck, BsWallet2, BsCashStack, BsPieChart
 } from 'react-icons/bs';
-import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
 import Sidebar from '../../../components/Sidebar/Sidebar';
 import { getAllOrders } from '../../../api/orderApi';
 import { getAllExpenses as getCustomerExpenses } from '../../../api/expenseApi';
@@ -27,33 +25,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   });
   
-  // Expense Form State
-  const [expenseForm, setExpenseForm] = useState({
-    amount: '',
-    category: 'other',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    paymentMethod: 'cash'
-  });
-
-  // Admin Payment Form State
-  const [paymentForm, setPaymentForm] = useState({
-    amount: '',
-    paymentType: 'business',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    paymentMethod: 'cash',
-    reference: ''
-  });
-
   // Data states
   const [orders, setOrders] = useState([]);
   const [customerExpenses, setCustomerExpenses] = useState([]);
@@ -63,55 +39,49 @@ const Dashboard = () => {
   const [payments, setPayments] = useState([]);
   const [adminPayments, setAdminPayments] = useState([]);
   
-  // Summary stats - Simplified
+  // Summary stats
   const [summary, setSummary] = useState({
     totalRevenue: 0,
     totalExpenses: 0,
     totalProfit: 0,
     totalOrders: 0,
     totalCustomers: 0,
-    totalJobs: 0
+    totalJobs: 0,
+    pendingPaymentOrders: 0,
+    partialPaymentOrders: 0,
+    completePaymentOrders: 0,
+    delayedOrders: 0,
+    activeOrders: 0,
+    priceOrders: 0,
+    completedOrders: 0
   });
-
-  // Chart data
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [revenueExpenseData, setRevenueExpenseData] = useState([]);
-  const [statusData, setStatusData] = useState([]);
-  const [categoryData, setCategoryData] = useState([]);
-
-  // Colors for charts
-  const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-  // Expense categories
-  const expenseCategories = [
-    'rent', 'utilities', 'salaries', 'marketing', 
-    'supplies', 'transport', 'maintenance', 'other'
-  ];
-
-  // Payment methods
-  const paymentMethods = ['cash', 'bank_transfer', 'cheque', 'online'];
-  
-  // Admin Payment types
-  const adminPaymentTypes = ['business', 'investment', 'loan', 'miscellaneous'];
 
   useEffect(() => {
     fetchDashboardData();
   }, [dateRange]);
 
-  // Format currency with 2 decimal places
   const formatCurrency = (amount) => {
     const numAmount = Number(amount || 0);
     return `Rs ${numAmount.toFixed(2).toLocaleString('en-PK')}`;
   };
 
-  // Format number with commas
   const formatNumber = (num) => {
     return Number(num || 0).toLocaleString('en-PK');
   };
 
-  // Round to 2 decimal places
   const roundToTwoDecimals = (value) => {
     return Number((value).toFixed(2));
+  };
+
+  // Handle order card click - navigate to All Orders with filter
+  const handleOrderCardClick = (filterType, filterValue) => {
+    navigate('/all-orders', { 
+      state: { 
+        orderFilter: filterType,
+        filterValue: filterValue,
+        fromDashboard: true 
+      } 
+    });
   };
 
   const fetchDashboardData = async () => {
@@ -129,11 +99,9 @@ const Dashboard = () => {
         getAllAdminPayments({ limit: 1000 })
       ]);
 
-      // Set orders
       const ordersData = ordersRes.data?.data || ordersRes.data || ordersRes || [];
       setOrders(ordersData);
 
-      // Set customer expenses
       let customerExpensesData = [];
       if (customerExpensesRes?.data?.data) {
         customerExpensesData = customerExpensesRes.data.data;
@@ -144,7 +112,6 @@ const Dashboard = () => {
       }
       setCustomerExpenses(customerExpensesData);
 
-      // Set admin expenses
       let adminExpensesData = [];
       if (adminExpensesRes?.data?.data) {
         adminExpensesData = adminExpensesRes.data.data;
@@ -155,7 +122,6 @@ const Dashboard = () => {
       }
       setAdminExpenses(adminExpensesData);
 
-      // Set admin payments
       let adminPaymentsData = [];
       if (adminPaymentsRes?.data?.data) {
         adminPaymentsData = adminPaymentsRes.data.data;
@@ -166,10 +132,7 @@ const Dashboard = () => {
       }
       setAdminPayments(adminPaymentsData);
 
-      // Combine both expense types
       const allExpenses = [...customerExpensesData, ...adminExpensesData];
-
-      // Set other data
       const customersData = customersRes.data?.data || customersRes.data || customersRes || [];
       setCustomers(customersData);
 
@@ -179,20 +142,8 @@ const Dashboard = () => {
       const paymentsData = paymentsRes.data?.data || paymentsRes.data || paymentsRes || [];
       setPayments(paymentsData);
 
-      // Calculate summaries - simplified
       const newSummary = calculateSummaries(ordersData, allExpenses, customersData, jobsData, paymentsData, adminPaymentsData);
-      
-      // Set summary first
       setSummary(newSummary);
-      
-      // Then prepare chart data with the new summary values
-      const chartData = prepareChartData(ordersData, allExpenses, paymentsData, customerExpensesData, adminExpensesData, adminPaymentsData, newSummary);
-      
-      // Set all chart data
-      setMonthlyData(chartData.monthlyData);
-      setRevenueExpenseData(chartData.revenueExpenseData);
-      setStatusData(chartData.statusData);
-      setCategoryData(chartData.categoryData);
 
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -208,32 +159,61 @@ const Dashboard = () => {
     const filteredPayments = filterByDateRange(paymentsData);
     const filteredAdminPayments = filterByDateRange(adminPaymentsData);
     
-    // Revenue from orders (advance payments) - round to 2 decimals
+    // Revenue calculations
     const totalAdvance = filteredOrders.reduce((sum, order) => {
-      const amount = order.advancePayment || 0;
-      return sum + roundToTwoDecimals(amount);
+      return sum + roundToTwoDecimals(order.advancePayment || 0);
     }, 0);
     
-    // Revenue from customer payments - round to 2 decimals
     const totalPaymentsAmount = filteredPayments.reduce((sum, payment) => {
-      const amount = payment.amount || 0;
-      return sum + roundToTwoDecimals(amount);
+      return sum + roundToTwoDecimals(payment.amount || 0);
     }, 0);
     
-    // Revenue from admin manual payments - round to 2 decimals
     const totalAdminPaymentsAmount = filteredAdminPayments.reduce((sum, payment) => {
-      const amount = payment.amount || 0;
-      return sum + roundToTwoDecimals(amount);
+      return sum + roundToTwoDecimals(payment.amount || 0);
     }, 0);
     
-    // Total revenue = all sources combined - round to 2 decimals
     const totalRevenue = roundToTwoDecimals(totalAdvance + totalPaymentsAmount + totalAdminPaymentsAmount);
-    
-    // Total expenses - round to 2 decimals
     const totalExpenses = roundToTwoDecimals(filteredAllExpenses.reduce((sum, expense) => {
-      const amount = expense.amount || 0;
-      return sum + roundToTwoDecimals(amount);
+      return sum + roundToTwoDecimals(expense.amount || 0);
     }, 0));
+
+    // Payment status counts
+    let pendingPayment = 0;
+    let partialPayment = 0;
+    let completePayment = 0;
+    let delayedOrders = 0;
+    let activeOrders = 0;
+    let completedOrders = 0;
+    let priceOrders = 0;
+
+    const today = new Date();
+
+    filteredOrders.forEach(order => {
+      const advance = order.advancePayment || 0;
+      const finalTotal = order.finalTotal || 0;
+      
+      if (advance >= finalTotal) {
+        completePayment++;
+      } else if (advance > 0) {
+        partialPayment++;
+      } else {
+        pendingPayment++;
+      }
+
+      // Order status counts
+      if (order.status === 'completed') {
+        completedOrders++;
+      } else if (order.status === 'in-progress') {
+        activeOrders++;
+      } else if (order.status === 'pending') {
+        priceOrders++;
+      }
+
+      // Delayed orders (due date passed and not completed)
+      if (order.dueDate && new Date(order.dueDate) < today && order.status !== 'completed') {
+        delayedOrders++;
+      }
+    });
 
     return {
       totalRevenue,
@@ -241,7 +221,14 @@ const Dashboard = () => {
       totalProfit: roundToTwoDecimals(totalRevenue - totalExpenses),
       totalOrders: filteredOrders.length,
       totalCustomers: customersData.length,
-      totalJobs: jobsData.length
+      totalJobs: jobsData.length,
+      pendingPaymentOrders: pendingPayment,
+      partialPaymentOrders: partialPayment,
+      completePaymentOrders: completePayment,
+      delayedOrders: delayedOrders,
+      activeOrders: activeOrders,
+      priceOrders: priceOrders,
+      completedOrders: completedOrders
     };
   };
 
@@ -259,135 +246,11 @@ const Dashboard = () => {
     });
   };
 
-  const prepareChartData = (ordersData, allExpenses, paymentsData, customerExpensesData, adminExpensesData, adminPaymentsData, currentSummary) => {
-    const monthly = {};
-    const last6Months = [];
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthName = date.toLocaleString('default', { month: 'short' });
-      
-      monthly[monthKey] = {
-        name: monthName,
-        revenue: 0,
-        expenses: 0,
-        profit: 0
-      };
-      last6Months.push(monthKey);
-    }
-
-    // Calculate revenue from orders (advance payments)
-    if (Array.isArray(ordersData)) {
-      ordersData.forEach(order => {
-        if (!order) return;
-        const date = new Date(order.date || order.createdAt || Date.now());
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthly[monthKey]) {
-          monthly[monthKey].revenue += roundToTwoDecimals(order.advancePayment || 0);
-        }
-      });
-    }
-
-    // Calculate revenue from customer payments
-    if (Array.isArray(paymentsData)) {
-      paymentsData.forEach(payment => {
-        if (!payment) return;
-        const date = new Date(payment.date || payment.createdAt || Date.now());
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthly[monthKey]) {
-          monthly[monthKey].revenue += roundToTwoDecimals(payment.amount || 0);
-        }
-      });
-    }
-
-    // Calculate revenue from admin manual payments
-    if (Array.isArray(adminPaymentsData)) {
-      adminPaymentsData.forEach(payment => {
-        if (!payment) return;
-        const date = new Date(payment.date || payment.createdAt || Date.now());
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthly[monthKey]) {
-          monthly[monthKey].revenue += roundToTwoDecimals(payment.amount || 0);
-        }
-      });
-    }
-
-    // Calculate expenses
-    if (Array.isArray(allExpenses)) {
-      allExpenses.forEach(expense => {
-        if (!expense) return;
-        const date = new Date(expense.date || expense.createdAt || Date.now());
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthly[monthKey]) {
-          monthly[monthKey].expenses += roundToTwoDecimals(expense.amount || 0);
-        }
-      });
-    }
-
-    // Calculate profit for each month
-    Object.keys(monthly).forEach(key => {
-      monthly[key].profit = roundToTwoDecimals(monthly[key].revenue - monthly[key].expenses);
-    });
-
-    const monthlyDataResult = last6Months.map(month => monthly[month] || { 
-      name: month, 
-      revenue: 0, 
-      expenses: 0, 
-      profit: 0 
-    });
-
-    // Create revenue/expense data using the current summary values
-    const revenueExpenseDataResult = [
-      { name: 'Revenue', amount: currentSummary.totalRevenue, color: '#2563eb' },
-      { name: 'Expenses', amount: currentSummary.totalExpenses, color: '#f59e0b' },
-      { name: 'Profit', amount: currentSummary.totalProfit, color: '#10b981' }
-    ];
-
-    const statusCount = {
-      pending: Array.isArray(ordersData) ? ordersData.filter(o => o?.status === 'pending').length : 0,
-      'in-progress': Array.isArray(ordersData) ? ordersData.filter(o => o?.status === 'in-progress').length : 0,
-      completed: Array.isArray(ordersData) ? ordersData.filter(o => o?.status === 'completed').length : 0
-    };
-
-    const statusDataResult = [
-      { name: 'Pending', value: statusCount.pending, color: '#f59e0b' },
-      { name: 'In Progress', value: statusCount['in-progress'], color: '#3b82f6' },
-      { name: 'Completed', value: statusCount.completed, color: '#10b981' }
-    ].filter(item => item.value > 0);
-
-    // Expense categories
-    const categoryExpenses = {};
-    
-    if (Array.isArray(allExpenses)) {
-      allExpenses.forEach(expense => {
-        if (!expense) return;
-        const cat = expense.category || 'other';
-        categoryExpenses[cat] = roundToTwoDecimals((categoryExpenses[cat] || 0) + (expense.amount || 0));
-      });
-    }
-
-    const categoryDataResult = Object.keys(categoryExpenses).map((key, index) => ({
-      name: key.charAt(0).toUpperCase() + key.slice(1),
-      value: categoryExpenses[key],
-      color: COLORS[index % COLORS.length]
-    }));
-
-    return {
-      monthlyData: monthlyDataResult,
-      revenueExpenseData: revenueExpenseDataResult,
-      statusData: statusDataResult,
-      categoryData: categoryDataResult
-    };
-  };
-
   const handleDateChange = (e) => {
     const { name, value } = e.target;
     setDateRange(prev => ({ ...prev, [name]: value }));
   };
 
-  // Manual refresh function
   const handleRefresh = () => {
     fetchDashboardData();
   };
@@ -398,7 +261,7 @@ const Dashboard = () => {
         <Sidebar />
         <div className="dashboard__content dashboard__content--loading">
           <div className="dashboard__spinner"></div>
-          <h2 className="dashboard__loading-text">Loading Dashboard...</h2>
+          <h2>Loading Dashboard...</h2>
         </div>
       </div>
     );
@@ -410,8 +273,8 @@ const Dashboard = () => {
         <Sidebar />
         <div className="dashboard__content dashboard__content--error">
           <FiPackage className="dashboard__error-icon" />
-          <h2 className="dashboard__error-title">Error Loading Dashboard</h2>
-          <p className="dashboard__error-message">{error}</p>
+          <h2>Error Loading Dashboard</h2>
+          <p>{error}</p>
           <button onClick={handleRefresh} className="dashboard__refresh-btn">
             <FiRefreshCw /> Try Again
           </button>
@@ -421,15 +284,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="dashboard__container sideber-container-Mobile">
+    <div className="dashboard__container">
       <Sidebar />
       
       <div className="dashboard__content">
         {/* Header with Title and Date Range */}
         <div className="dashboard__header">
           <div className="dashboard__header-left">
-            <h1 className="dashboard__title"> Dashboard</h1>
-            {/* <p className="dashboard__subtitle">Welcome back, Admin</p> */}
+            <h1 className="dashboard__title">Dashboard</h1>
+            <p className="dashboard__subtitle">Welcome back, Admin</p>
           </div>
           
           <div className="dashboard__header-right">
@@ -441,10 +304,9 @@ const Dashboard = () => {
                   name="startDate"
                   value={dateRange.startDate}
                   onChange={handleDateChange}
-                  className="dashboard__date-field"
                 />
               </div>
-              <span className="dashboard__date-separator">to</span>
+              <span>to</span>
               <div className="dashboard__date-input">
                 <FiCalendar className="dashboard__date-icon" />
                 <input
@@ -452,317 +314,221 @@ const Dashboard = () => {
                   name="endDate"
                   value={dateRange.endDate}
                   onChange={handleDateChange}
-                  className="dashboard__date-field"
                 />
               </div>
-              <button className="dashboard__filter-btn" onClick={handleRefresh}>
-                <FiFilter /> Apply Filter
+              <button onClick={handleRefresh} className="dashboard__filter-btn">
+                <FiFilter /> Apply
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats Cards - Simplified */}
-        <div className="dashboard__stats-grid">
-          {/* Total Revenue Card */}
-          <div className="dashboard__stat-card dashboard__stat-card--revenue">
-            <div className="dashboard__stat-icon">
+        {/* Financial Overview Cards */}
+        <div className="dashboard__financial-section">
+          <div className="dashboard__financial-card dashboard__financial-card--balance">
+            <div className="dashboard__financial-icon">
               <BsCurrencyRupee />
             </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Total Revenue</span>
-              <span className="dashboard__stat-value">{formatCurrency(summary.totalRevenue)}</span>
+            <div className="dashboard__financial-content">
+              <span className="dashboard__financial-label">Balance</span>
+              <span className="dashboard__financial-value">{formatCurrency(summary.totalRevenue)}</span>
             </div>
           </div>
 
-          {/* Total Expenses Card */}
-          <div className="dashboard__stat-card dashboard__stat-card--expenses">
-            <div className="dashboard__stat-icon">
+          <div className="dashboard__financial-card dashboard__financial-card--expenses">
+            <div className="dashboard__financial-icon">
               <BsWallet2 />
             </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Total Expenses</span>
-              <span className="dashboard__stat-value">{formatCurrency(summary.totalExpenses)}</span>
+            <div className="dashboard__financial-content">
+              <span className="dashboard__financial-label">Total Exp</span>
+              <span className="dashboard__financial-value">{formatCurrency(summary.totalExpenses)}</span>
             </div>
           </div>
 
-          {/* Net Profit Card */}
-          <div className="dashboard__stat-card dashboard__stat-card--profit">
-            <div className="dashboard__stat-icon">
-              <FiDollarSign />
+          <div className="dashboard__financial-card dashboard__financial-card--profit">
+            <div className="dashboard__financial-icon">
+              <FiTrendingUp />
             </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Net Profit</span>
-              <span className="dashboard__stat-value">{formatCurrency(summary.totalProfit)}</span>
-              <span className={`dashboard__stat-trend ${summary.totalProfit >= 0 ? 'dashboard__stat-trend--positive' : 'dashboard__stat-trend--negative'}`}>
-                {summary.totalProfit >= 0 ? '▲ Profit' : '▼ Loss'}
-              </span>
-            </div>
-          </div>
-
-          {/* Total Orders Card */}
-          <div className="dashboard__stat-card dashboard__stat-card--orders">
-            <div className="dashboard__stat-icon">
-              <FiPackage />
-            </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Total Orders</span>
-              <span className="dashboard__stat-value">{formatNumber(summary.totalOrders)}</span>
+            <div className="dashboard__financial-content">
+              <span className="dashboard__financial-label">NET Profit</span>
+              <span className="dashboard__financial-value">{formatCurrency(summary.totalProfit)}</span>
             </div>
           </div>
         </div>
 
-        {/* Secondary Stats */}
-        <div className="dashboard__stats-row">
-          <div className="dashboard__stat-card dashboard__stat-card--small">
-            <div className="dashboard__stat-icon">
-              <BsPeople />
-            </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Total Customers</span>
-              <span className="dashboard__stat-value">{formatNumber(summary.totalCustomers)}</span>
-            </div>
+        {/* Orders Section - Clickable Cards */}
+        <div className="dashboard__orders-section">
+          <div className="dashboard__orders-header">
+            <h3>Orders</h3>
+            <span className="dashboard__orders-total">{formatNumber(summary.totalOrders)}</span>
           </div>
-
-          <div className="dashboard__stat-card dashboard__stat-card--small">
-            <div className="dashboard__stat-icon">
-              <BsBoxSeam />
-            </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Total Jobs</span>
-              <span className="dashboard__stat-value">{formatNumber(summary.totalJobs)}</span>
-            </div>
-          </div>
-
-          <div className="dashboard__stat-card dashboard__stat-card--small">
-            <div className="dashboard__stat-icon">
-              <BsTruck />
-            </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Active Projects</span>
-              <span className="dashboard__stat-value">{formatNumber(orders.filter(o => o.status === 'pending' || o.status === 'in-progress').length)}</span>
-            </div>
-          </div>
-
-          <div className="dashboard__stat-card dashboard__stat-card--small">
-            <div className="dashboard__stat-icon">
-              <BsGraphUp />
-            </div>
-            <div className="dashboard__stat-content">
-              <span className="dashboard__stat-label">Completion Rate</span>
-              <span className="dashboard__stat-value">
-                {summary.totalOrders > 0 
-                  ? Math.round((orders.filter(o => o.status === 'completed').length / summary.totalOrders) * 100) 
-                  : 0}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row 1 */}
-        <div className="dashboard__charts-row">
-          {/* Revenue vs Expenses Line Chart */}
-          <div className="dashboard__chart-card">
-            <div className="dashboard__chart-header">
-              <h3 className="dashboard__chart-title">Revenue vs Expenses Trend</h3>
-              <div className="dashboard__chart-legend">
-                <span className="dashboard__legend-item">
-                  <span className="dashboard__legend-dot dashboard__legend-dot--revenue"></span>
-                  Revenue
-                </span>
-                <span className="dashboard__legend-item">
-                  <span className="dashboard__legend-dot dashboard__legend-dot--expenses"></span>
-                  Expenses
-                </span>
-                <span className="dashboard__legend-item">
-                  <span className="dashboard__legend-dot dashboard__legend-dot--profit"></span>
-                  Profit
-                </span>
+          
+          <div className="dashboard__orders-grid">
+            {/* Ordered Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('ordered', 'all')}>
+              <div className="dashboard__order-icon dashboard__order-icon--ordered">
+                <FiShoppingBag />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Ordered</span>
+                <span className="dashboard__order-value">{formatNumber(summary.totalOrders)}</span>
               </div>
             </div>
-            <div className="dashboard__chart-wrapper">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                  <XAxis dataKey="name" stroke="var(--text-muted)" />
-                  <YAxis stroke="var(--text-muted)" />
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{ 
-                      borderRadius: '8px', 
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--white)',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#2563eb" 
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="expenses" 
-                    stroke="#f59e0b" 
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
-          {/* Revenue/Expense/Profit Bar Chart */}
-          <div className="dashboard__chart-card">
-            <div className="dashboard__chart-header">
-              <h3 className="dashboard__chart-title">Current Period Summary</h3>
+            {/* Detail Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('detail', 'all')}>
+              <div className="dashboard__order-icon dashboard__order-icon--detail">
+                <FiActivity />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Detail</span>
+                <span className="dashboard__order-value">{formatNumber(summary.totalOrders)}</span>
+              </div>
             </div>
-            <div className="dashboard__chart-wrapper">
-              {revenueExpenseData && revenueExpenseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueExpenseData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                    <XAxis dataKey="name" stroke="var(--text-muted)" />
-                    <YAxis stroke="var(--text-muted)" />
-                    <Tooltip 
-                      formatter={(value) => formatCurrency(value)}
-                      contentStyle={{ 
-                        borderRadius: '8px', 
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--white)',
-                        color: 'var(--text-primary)'
-                      }}
-                    />
-                    <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                      {revenueExpenseData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-                  <p style={{ color: 'var(--text-muted)' }}>No data available for the selected period</p>
-                </div>
-              )}
+
+            {/* Pending Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('pending', 'pending_payment')}>
+              <div className="dashboard__order-icon dashboard__order-icon--pending">
+                <FiClock />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Pending</span>
+                <span className="dashboard__order-value">{formatNumber(summary.pendingPaymentOrders)}</span>
+              </div>
+            </div>
+
+            {/* Order Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('order', 'all')}>
+              <div className="dashboard__order-icon dashboard__order-icon--order">
+                <FiPackage />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Order</span>
+                <span className="dashboard__order-value">{formatNumber(summary.totalOrders)}</span>
+              </div>
+            </div>
+
+            {/* Delay Order Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('delay', 'delayed')}>
+              <div className="dashboard__order-icon dashboard__order-icon--delay">
+                <FiAlertCircle />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Delay order</span>
+                <span className="dashboard__order-value">{formatNumber(summary.delayedOrders)}</span>
+              </div>
+            </div>
+
+            {/* Active Order Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('active', 'active')}>
+              <div className="dashboard__order-icon dashboard__order-icon--active">
+                <FiActivity />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Active order</span>
+                <span className="dashboard__order-value">{formatNumber(summary.activeOrders)}</span>
+              </div>
+            </div>
+
+            {/* Price Order Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('price', 'price')}>
+              <div className="dashboard__order-icon dashboard__order-icon--price">
+                <FiDollarSign />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Price order</span>
+                <span className="dashboard__order-value">{formatNumber(summary.priceOrders)}</span>
+              </div>
+            </div>
+
+            {/* Complete Order Card */}
+            <div className="dashboard__order-card" onClick={() => handleOrderCardClick('complete', 'complete')}>
+              <div className="dashboard__order-icon dashboard__order-icon--complete">
+                <FiCheckCircle />
+              </div>
+              <div className="dashboard__order-info">
+                <span className="dashboard__order-label">Complete order</span>
+                <span className="dashboard__order-value">{formatNumber(summary.completedOrders)}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Charts Row 2 */}
-        <div className="dashboard__charts-row">
-          {/* Order Status Pie Chart */}
-          <div className="dashboard__chart-card dashboard__chart-card--half">
-            <div className="dashboard__chart-header">
-              <h3 className="dashboard__chart-title">Order Status Distribution</h3>
+        {/* Customer Section */}
+        <div className="dashboard__customer-section">
+          <div className="dashboard__customer-header">
+            <h3>Customer</h3>
+            <span className="dashboard__customer-total">{formatNumber(summary.totalCustomers)}</span>
+          </div>
+          
+          <div className="dashboard__customer-cards">
+            <div className="dashboard__customer-card">
+              <div className="dashboard__customer-icon">
+                <FiUsers />
+              </div>
+              <div className="dashboard__customer-info">
+                <span className="dashboard__customer-label">Total Customers</span>
+                <span className="dashboard__customer-value">{formatNumber(summary.totalCustomers)}</span>
+              </div>
             </div>
-            <div className="dashboard__chart-wrapper dashboard__chart-wrapper--pie">
-              {statusData && statusData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={statusData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => formatNumber(value)}
-                        contentStyle={{ 
-                          borderRadius: '8px', 
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--white)',
-                          color: 'var(--text-primary)'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="dashboard__pie-legend">
-                    {statusData.map((item, index) => (
-                      <div key={index} className="dashboard__pie-legend-item">
-                        <span className="dashboard__pie-color-dot" style={{ backgroundColor: item.color }}></span>
-                        <span>{item.name}: {item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-                  <p style={{ color: 'var(--text-muted)' }}>No order data available</p>
-                </div>
-              )}
+
+            <div className="dashboard__customer-card">
+              <div className="dashboard__customer-icon">
+                <FiUser />
+              </div>
+              <div className="dashboard__customer-info">
+                <span className="dashboard__customer-label">New Customers</span>
+                <span className="dashboard__customer-value">{formatNumber(Math.floor(summary.totalCustomers * 0.2))}</span>
+              </div>
+            </div>
+
+            <div className="dashboard__customer-card">
+              <div className="dashboard__customer-icon">
+                <FiActivity />
+              </div>
+              <div className="dashboard__customer-info">
+                <span className="dashboard__customer-label">Active Customers</span>
+                <span className="dashboard__customer-value">{formatNumber(Math.floor(summary.totalCustomers * 0.7))}</span>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Expense Categories Pie Chart */}
-          <div className="dashboard__chart-card dashboard__chart-card--half">
-            <div className="dashboard__chart-header">
-              <h3 className="dashboard__chart-title">Expense by Category</h3>
+        {/* Payment Status Section */}
+        <div className="dashboard__payment-section">
+          <div className="dashboard__payment-header">
+            <h3>Payment Status</h3>
+          </div>
+          
+          <div className="dashboard__payment-cards">
+            <div className="dashboard__payment-card dashboard__payment-card--pending" onClick={() => handleOrderCardClick('pending', 'pending_payment')}>
+              <div className="dashboard__payment-icon">
+                <FiAlertCircle />
+              </div>
+              <div className="dashboard__payment-info">
+                <span className="dashboard__payment-label">Pending Payment</span>
+                <span className="dashboard__payment-value">{formatNumber(summary.pendingPaymentOrders)}</span>
+              </div>
             </div>
-            <div className="dashboard__chart-wrapper dashboard__chart-wrapper--pie">
-              {categoryData && categoryData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => formatCurrency(value)}
-                        contentStyle={{ 
-                          borderRadius: '8px', 
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--white)',
-                          color: 'var(--text-primary)'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="dashboard__pie-legend">
-                    {categoryData.map((item, index) => (
-                      <div key={index} className="dashboard__pie-legend-item">
-                        <span className="dashboard__pie-color-dot" style={{ backgroundColor: item.color }}></span>
-                        <span>{item.name}: {formatCurrency(item.value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-                  <p style={{ color: 'var(--text-muted)' }}>No expense data available</p>
-                </div>
-              )}
+
+            <div className="dashboard__payment-card dashboard__payment-card--partial" onClick={() => handleOrderCardClick('partial', 'partial_payment')}>
+              <div className="dashboard__payment-icon">
+                <FiClock />
+              </div>
+              <div className="dashboard__payment-info">
+                <span className="dashboard__payment-label">Partial Payment</span>
+                <span className="dashboard__payment-value">{formatNumber(summary.partialPaymentOrders)}</span>
+              </div>
+            </div>
+
+            <div className="dashboard__payment-card dashboard__payment-card--complete" onClick={() => handleOrderCardClick('complete', 'complete_payment')}>
+              <div className="dashboard__payment-icon">
+                <FiCheckCircle />
+              </div>
+              <div className="dashboard__payment-info">
+                <span className="dashboard__payment-label">Complete Payment</span>
+                <span className="dashboard__payment-value">{formatNumber(summary.completePaymentOrders)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -770,11 +536,12 @@ const Dashboard = () => {
         {/* Recent Orders Table */}
         <div className="dashboard__recent-orders">
           <div className="dashboard__section-header">
-            <h3 className="dashboard__section-title">Recent Orders</h3>
-            <button className="dashboard__view-all-btn" onClick={() => navigate('/all-orders')}>
+            <h3>Recent Orders</h3>
+            <button onClick={() => navigate('/all-orders')} className="dashboard__view-all-btn">
               View All
             </button>
           </div>
+          
           <div className="dashboard__table-wrapper">
             <table className="dashboard__table">
               <thead>
@@ -784,23 +551,28 @@ const Dashboard = () => {
                   <th>Date</th>
                   <th>Amount</th>
                   <th>Status</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {orders && orders.length > 0 ? (
-                  orders.slice(0, 5).map((order) => (
-                    <tr key={order._id} onClick={() => navigate(`/order-details/${order._id}`)}>
-                      <td className="dashboard__table-order-id">{order.billNumber || order._id?.slice(-8) || 'N/A'}</td>
-                      <td className="dashboard__table-customer">{order.customer?.name || 'N/A'}</td>
-                      <td>{new Date(order.date || order.createdAt || Date.now()).toLocaleDateString()}</td>
-                      <td className="dashboard__table-amount">{formatCurrency(order.advancePayment || 0)}</td>
-                      <td>
-                        <span className={`dashboard__status-badge dashboard__status-badge--${order.status || 'pending'}`}>
-                          {order.status || 'pending'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  orders.slice(0, 5).map((order) => {
+                    const paymentStatus = order.advancePayment >= order.finalTotal ? 'complete' : 
+                                         order.advancePayment > 0 ? 'partial' : 'pending';
+                    return (
+                      <tr key={order._id} onClick={() => navigate(`/customer-orders/${order._id}`)}>
+                        <td className="dashboard__table-order-id">{order.billNumber || order._id?.slice(-8) || 'N/A'}</td>
+                        <td className="dashboard__table-customer">{order.customer?.name || 'N/A'}</td>
+                        <td>{new Date(order.date || order.createdAt || Date.now()).toLocaleDateString()}</td>
+                        <td className="dashboard__table-amount">{formatCurrency(order.finalTotal || 0)}</td>
+                        <td>
+                          <span className={`dashboard__status-badge dashboard__status-badge--${paymentStatus}`}>
+                            {paymentStatus === 'pending' ? 'Pending' : 
+                             paymentStatus === 'partial' ? 'Partial' : 'Complete'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>
@@ -809,7 +581,7 @@ const Dashboard = () => {
                   </tr>
                 )}
               </tbody>
-            </table> 
+            </table>
           </div>
         </div>
       </div>

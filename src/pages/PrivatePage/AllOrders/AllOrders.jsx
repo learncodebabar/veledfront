@@ -1,9 +1,11 @@
+// src/pages/PrivatePage/AllOrders/AllOrders.jsx
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FiPackage, FiSearch, FiFilter, FiCalendar,
   FiChevronRight, FiRefreshCw, FiX, FiDollarSign,
-  FiUser, FiPhone, FiMapPin, FiClock
+  FiUser, FiPhone, FiMapPin, FiClock, FiAlertCircle,
+  FiCheckCircle
 } from 'react-icons/fi';
 import {
   BsCurrencyRupee, BsWallet2, BsBoxSeam,
@@ -19,12 +21,19 @@ import './AllOrders.css';
 
 const AllOrders = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get filter from navigation state (from dashboard)
+  const orderFilter = location.state?.orderFilter;
+  const filterValue = location.state?.filterValue;
+  const fromDashboard = location.state?.fromDashboard;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(filterValue || 'all');
   const [sortBy, setSortBy] = useState('newest');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,6 +43,14 @@ const AllOrders = () => {
     { value: 'pending', label: 'Pending', icon: <MdPendingActions />, color: 'var(--warning-color)' },
     { value: 'in-progress', label: 'In Progress', icon: <MdOutlineLocalShipping />, color: 'var(--info-color)' },
     { value: 'completed', label: 'Completed', icon: <MdCheckCircle />, color: 'var(--success-color)' }
+  ];
+
+  // Payment status filter options
+  const paymentFilterOptions = [
+    { value: 'all', label: 'All Payments' },
+    { value: 'pending_payment', label: 'Pending Payment', icon: <FiAlertCircle />, color: '#f59e0b' },
+    { value: 'partial_payment', label: 'Partial Payment', icon: <FiClock />, color: '#3b82f6' },
+    { value: 'complete_payment', label: 'Complete Payment', icon: <FiCheckCircle />, color: '#10b981' }
   ];
 
   // Sort options
@@ -50,7 +67,7 @@ const AllOrders = () => {
 
   useEffect(() => {
     filterAndSortOrders();
-  }, [orders, searchTerm, statusFilter, sortBy]);
+  }, [orders, searchTerm, statusFilter, sortBy, filterValue]);
 
   const fetchOrders = async () => {
     try {
@@ -91,8 +108,38 @@ const AllOrders = () => {
       );
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
+    // Apply payment status filter (from dashboard)
+    if (filterValue && filterValue !== 'all') {
+      filtered = filtered.filter(order => {
+        const advance = order.advancePayment || 0;
+        const finalTotal = order.finalTotal || 0;
+        const isPaid = advance >= finalTotal;
+        const isPartial = advance > 0 && advance < finalTotal;
+        const isPending = advance === 0;
+        
+        switch(filterValue) {
+          case 'pending_payment':
+            return isPending;
+          case 'partial_payment':
+            return isPartial;
+          case 'complete_payment':
+            return isPaid;
+          case 'delayed':
+            return order.dueDate && new Date(order.dueDate) < new Date() && order.status !== 'completed';
+          case 'active':
+            return order.status === 'in-progress';
+          case 'price':
+            return order.status === 'pending';
+          case 'complete':
+            return order.status === 'completed';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply regular status filter
+    if (statusFilter !== 'all' && !filterValue) {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
 
@@ -124,6 +171,12 @@ const AllOrders = () => {
     setSearchTerm('');
   };
 
+  const clearFilter = () => {
+    setStatusFilter('all');
+    // Clear the filter value from dashboard
+    window.history.replaceState({}, document.title);
+  };
+
   const getStatusBadge = (status) => {
     const option = statusOptions.find(opt => opt.value === status) || statusOptions[0];
     return (
@@ -136,6 +189,19 @@ const AllOrders = () => {
         <span>{option.label}</span>
       </span>
     );
+  };
+
+  const getPaymentStatusBadge = (order) => {
+    const advance = order.advancePayment || 0;
+    const finalTotal = order.finalTotal || 0;
+    
+    if (advance >= finalTotal) {
+      return { status: 'complete', label: 'Complete', icon: <FiCheckCircle />, color: '#10b981' };
+    } else if (advance > 0) {
+      return { status: 'partial', label: 'Partial', icon: <FiClock />, color: '#3b82f6' };
+    } else {
+      return { status: 'pending', label: 'Pending', icon: <FiAlertCircle />, color: '#f59e0b' };
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -156,6 +222,19 @@ const AllOrders = () => {
     }
   };
 
+  // Get active filter display
+  const getActiveFilterDisplay = () => {
+    if (filterValue && filterValue !== 'all') {
+      const filter = paymentFilterOptions.find(f => f.value === filterValue);
+      if (filter) {
+        return { label: filter.label, icon: filter.icon, color: filter.color };
+      }
+    }
+    return null;
+  };
+
+  const activeFilter = getActiveFilterDisplay();
+
   if (loading) {
     return (
       <div className="allorder-container">
@@ -170,7 +249,7 @@ const AllOrders = () => {
 
   if (error) {
     return (
-      <div className="allorder-container   ">
+      <div className="allorder-container">
         <Sidebar />
         <div className="allorder-content allorder-error">
           <FiPackage className="allorder-error-icon" />
@@ -185,7 +264,7 @@ const AllOrders = () => {
   }
 
   return (
-    <div className="allorder-container  sideber-container-Mobile">
+    <div className="allorder-container sideber-container-Mobile">
       <Sidebar />
       
       <div className="allorder-content">
@@ -194,6 +273,17 @@ const AllOrders = () => {
           <div className="allorder-header-title">
             <h1>All Orders</h1>
             <p>Manage and view all your orders</p>
+            {activeFilter && fromDashboard && (
+              <div className="allorder-active-filter">
+                <span className="active-filter-badge" style={{ backgroundColor: activeFilter.color + '20', color: activeFilter.color }}>
+                  {activeFilter.icon}
+                  {activeFilter.label}
+                </span>
+                <button onClick={clearFilter} className="clear-filter-btn">
+                  <FiX /> Clear Filter
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="allorder-header-actions">
@@ -231,6 +321,7 @@ const AllOrders = () => {
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
               className="allorder-filter-select"
+              disabled={!!filterValue}
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -256,6 +347,9 @@ const AllOrders = () => {
         {/* Results Info */}
         <div className="allorder-results-info">
           <span>Showing {filteredOrders.length} of {orders.length} orders</span>
+          {activeFilter && fromDashboard && (
+            <span className="filtered-badge">Filtered by: {activeFilter.label}</span>
+          )}
         </div>
 
         {/* Orders Grid */}
@@ -264,80 +358,88 @@ const AllOrders = () => {
             <FiPackage className="allorder-no-data-icon" />
             <h3>No orders found</h3>
             <p>Try adjusting your search or filter to find what you're looking for.</p>
+            {activeFilter && (
+              <button onClick={clearFilter} className="allorder-clear-filter-btn">
+                Clear Filter
+              </button>
+            )}
           </div>
         ) : (
           <div className="allorder-orders-grid">
-            {filteredOrders.map((order) => (
-              <div 
-                key={order._id} 
-                className="allorder-order-card"
-                onClick={() => navigate(`/customer-orders/${order._id}`)}
-              >
-                {/* Card Header */}
-                <div className="allorder-order-card-header">
-                  <div className="allorder-order-title">
-                    <h3 className="allorder-order-id">{order.billNumber || order._id?.slice(-8)}</h3>
-                    <span className="allorder-order-date">
-                      <FiCalendar />
-                      {formatDate(order.date || order.createdAt)}
-                    </span>
+            {filteredOrders.map((order) => {
+              const paymentStatus = getPaymentStatusBadge(order);
+              return (
+                <div 
+                  key={order._id} 
+                  className="allorder-order-card"
+                  onClick={() => navigate(`/customer-orders/${order._id}`)}
+                >
+                  {/* Card Header */}
+                  <div className="allorder-order-card-header">
+                    <div className="allorder-order-title">
+                      <h3 className="allorder-order-id">{order.billNumber || order._id?.slice(-8)}</h3>
+                      <span className="allorder-order-date">
+                        <FiCalendar />
+                        {formatDate(order.date || order.createdAt)}
+                      </span>
+                    </div>
+                    {getStatusBadge(order.status)}
                   </div>
-                  {getStatusBadge(order.status)}
-                </div>
 
-                {/* Customer Info */}
-                <div className="allorder-order-customer-info">
-                  <div className="allorder-customer-avatar">
-                    {order.customer?.name?.charAt(0).toUpperCase() || '?'}
-                  </div>
-                  <div className="allorder-customer-details">
-                    <h4 className="allorder-customer-name">{order.customer?.name || 'Unknown Customer'}</h4>
-                    <p className="allorder-customer-phone">
-                      <FiPhone />
-                      {order.customer?.phone || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Order Details */}
-                <div className="allorder-order-details">
-                  <div className="allorder-detail-item">
-                    <FiDollarSign className="allorder-detail-icon" />
-                    <div>
-                      <span className="allorder-detail-label">Final Total</span>
-                      <span className="allorder-detail-value">{formatCurrency(order.finalTotal)}</span>
+                  {/* Customer Info */}
+                  <div className="allorder-order-customer-info">
+                    <div className="allorder-customer-avatar">
+                      {order.customer?.name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div className="allorder-customer-details">
+                      <h4 className="allorder-customer-name">{order.customer?.name || 'Unknown Customer'}</h4>
+                      <p className="allorder-customer-phone">
+                        <FiPhone />
+                        {order.customer?.phone || 'N/A'}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="allorder-detail-item">
-                    <BsWallet2 className="allorder-detail-icon" />
-                    <div>
-                      <span className="allorder-detail-label">Advance</span>
-                      <span className="allorder-detail-value">{formatCurrency(order.advancePayment || 0)}</span>
+                  {/* Order Details */}
+                  <div className="allorder-order-details">
+                    <div className="allorder-detail-item">
+                      <FiDollarSign className="allorder-detail-icon" />
+                      <div>
+                        <span className="allorder-detail-label">Final Total</span>
+                        <span className="allorder-detail-value">{formatCurrency(order.finalTotal)}</span>
+                      </div>
+                    </div>
+
+                    <div className="allorder-detail-item">
+                      <BsWallet2 className="allorder-detail-icon" />
+                      <div>
+                        <span className="allorder-detail-label">Advance</span>
+                        <span className="allorder-detail-value">{formatCurrency(order.advancePayment || 0)}</span>
+                      </div>
+                    </div>
+
+                    <div className="allorder-detail-item">
+                      <BsCurrencyRupee className="allorder-detail-icon" />
+                      <div>
+                        <span className="allorder-detail-label">Remaining</span>
+                        <span className="allorder-detail-value">{formatCurrency(order.remainingBalance || order.finalTotal)}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="allorder-detail-item">
-                    <BsCurrencyRupee className="allorder-detail-icon" />
-                    <div>
-                      <span className="allorder-detail-label">Remaining</span>
-                      <span className="allorder-detail-value">{formatCurrency(order.remainingBalance || order.finalTotal)}</span>
+                  {/* Payment Status */}
+                  <div className="allorder-order-footer">
+                    <div className="allorder-payment-status">
+                      <span className={`allorder-status-dot allorder-status-dot-${paymentStatus.status}`}></span>
+                      <span>Payment: {paymentStatus.label}</span>
                     </div>
+                    <button className="allorder-view-details-btn">
+                      View Details <FiChevronRight />
+                    </button>
                   </div>
                 </div>
-
-                {/* Payment Status */}
-                <div className="allorder-order-footer">
-                  <div className="allorder-payment-status">
-                    <span className={`allorder-status-dot allorder-status-dot-${order.paymentStatus || 'pending'}`}></span>
-                    <span>Payment: {order.paymentStatus || 'pending'}</span>
-                  </div>
-                  <button className="allorder-view-details-btn">
-                    View Details <FiChevronRight />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

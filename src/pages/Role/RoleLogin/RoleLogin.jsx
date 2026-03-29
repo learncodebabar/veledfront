@@ -139,7 +139,7 @@ const RoleLogin = () => {
 
         // Redirect to role dashboard
         setTimeout(() => {
-          navigate('/Role-Add-Customer');
+          navigate('/Role-dashboard');
         }, 1500);
       } else {
         showToast('error', response.message || 'Invalid OTP');

@@ -2,7 +2,6 @@
 import API from "./axios";
 
 // ============ CUSTOMER APIS ============
-// These work for BOTH Admin and Role users
 
 /**
  * Get single customer by ID
@@ -12,7 +11,8 @@ export const getCustomerById = async (id) => {
   try {
     console.log('📤 Fetching customer:', id);
     const response = await API.get(`/customers/${id}`);
-    return response.data;
+    console.log('📥 Customer response:', response.data);
+    return response.data; // Returns { success: true, customer: {...}, jobs: [...] }
   } catch (error) {
     console.error('❌ Get customer error:', error);
     throw error;
@@ -80,7 +80,7 @@ export const getAllCustomers = async (params = {}) => {
   }
 };
 
-// ============ COMPATIBILITY FUNCTIONS ============
+// ============ JOB RELATED FUNCTIONS ============
 
 /**
  * getCustomerJobs - Get all jobs for a customer
@@ -89,7 +89,9 @@ export const getAllCustomers = async (params = {}) => {
 export const getCustomerJobs = async (customerId) => {
   try {
     console.log('📤 Fetching jobs for customer:', customerId);
+    // Using the jobs endpoint that already exists
     const response = await API.get(`/jobs/customer/${customerId}`);
+    console.log('📥 Jobs response:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Get customer jobs error:', error);

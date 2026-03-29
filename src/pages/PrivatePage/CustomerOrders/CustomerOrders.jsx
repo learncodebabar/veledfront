@@ -4,7 +4,7 @@ import {
   FiPackage, FiDollarSign, FiPlus, FiX, FiClock,
   FiCheckCircle, FiAlertCircle, FiShoppingBag, FiUser,
   FiPhone, FiMapPin, FiCalendar, FiCreditCard, FiChevronRight,
-  FiTrash2, FiEdit2, FiChevronDown, FiRefreshCw
+  FiTrash2, FiEdit2, FiChevronDown, FiRefreshCw, FiList
 } from 'react-icons/fi';
 import { 
   BsTelephone, BsGeoAlt, BsCurrencyRupee, BsWallet2,
@@ -17,7 +17,6 @@ import {
 import Sidebar from '../../../components/Sidebar/Sidebar';
 import { getOrderById, updateOrder } from '../../../api/orderApi';
 import { getCustomerById } from '../../../api/customerApi';
-import { fetchJobsByCustomer } from '../../../api/jobApi';
 import { 
   createExpense,
   getExpensesByOrder,
@@ -38,11 +37,9 @@ const CustomerOrders = () => {
   
   const [order, setOrder] = useState(null);
   const [customer, setCustomer] = useState(null);
-  const [jobs, setJobs] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [payments, setPayments] = useState([]);
   
-  const [jobsLoading, setJobsLoading] = useState(false);
   const [expensesLoading, setExpensesLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,27 +105,20 @@ const CustomerOrders = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // جب order آ جائے تو customer ID لے کر jobs fetch کریں
+  // When order loads, fetch customer details
   useEffect(() => {
     if (order?.customer?._id) {
-      loadCustomerJobs(order.customer._id);
+      fetchCustomerDetails(order.customer._id);
     } else if (order?.customer) {
       fetchCustomerDetails(order.customer);
     }
     
-    // Expenses اور Payments fetch کریں
+    // Fetch expenses and payments
     if (order?._id) {
       fetchOrderExpenses(order._id);
       fetchOrderPayments(order._id);
     }
   }, [order]);
-
-  // جب customer مل جائے تو jobs fetch کریں
-  useEffect(() => {
-    if (customer?._id) {
-      loadCustomerJobs(customer._id);
-    }
-  }, [customer]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -181,32 +171,6 @@ const CustomerOrders = () => {
       setCustomer(customerData);
     } catch (error) {
       console.error("Error fetching customer:", error);
-    }
-  };
-
-  const loadCustomerJobs = async (customerId) => {
-    try {
-      setJobsLoading(true);
-      const response = await fetchJobsByCustomer(customerId);
-      console.log("Jobs fetched:", response);
-      
-      let jobsData;
-      if (response.data && response.data.data) {
-        jobsData = response.data.data;
-      } else if (response.data) {
-        jobsData = response.data;
-      } else {
-        jobsData = response;
-      }
-      
-      setJobs(Array.isArray(jobsData) ? jobsData : []);
-      
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
-      showToast("Failed to fetch jobs", "error");
-      setJobs([]);
-    } finally {
-      setJobsLoading(false);
     }
   };
 
@@ -590,12 +554,8 @@ const CustomerOrders = () => {
     return colors[category] || "#6b7280";
   };
 
-  const calculateWorkTotal = (work) => {
-    if (work.total) return work.total;
-    if (work.materials && work.materials.length > 0) {
-      return work.materials.reduce((sum, material) => sum + (material.total || 0), 0);
-    }
-    return 0;
+  const calculateItemTotal = (item) => {
+    return (item.quantity || 1) * (item.unitPrice || 0);
   };
 
   // Format profit with sign
@@ -643,7 +603,7 @@ const CustomerOrders = () => {
   }
 
   return (
-    <div className="main-container-customer-orders  sideber-container-Mobile">
+    <div className="main-container-customer-orders sideber-container-Mobile">
       <Sidebar />
       
       <div className="content-wrapper-customer-orders">
@@ -662,6 +622,7 @@ const CustomerOrders = () => {
           <div className="header-title-customer-orders">
             <div>
               <h1>Order Details</h1>
+              <p className="order-number-header">Bill No: {order.billNumber}</p>
             </div>
           </div>
           <div className="header-actions-customer-orders">
@@ -748,9 +709,9 @@ const CustomerOrders = () => {
           </div>
         </div>
 
-        {/* Order Summary Cards - با condition */}
+        {/* Order Summary Cards */}
         <div className="summary-cards-grid-customer-orders">
-          {/* Final Total Card - Always visible */}
+          {/* Final Total Card */}
           <div className="summary-card-customer-orders total-card">
             <div className="card-icon-customer-orders">
               <FiShoppingBag />
@@ -841,102 +802,58 @@ const CustomerOrders = () => {
           )}
         </div>
 
-        {/* JOBS SECTION */}
+        {/* ✅ ORDER ITEMS SECTION (JOBS) - From Order Items Array */}
         <div className="jobs-section-customer-orders">
           <div className="section-header-customer-orders">
             <h3>
-              <FiPackage className="section-icon" /> Customer Jobs
+              <FiList className="section-icon" /> Order Items
             </h3>
+            <span className="items-count">{order.items?.length || 0} items</span>
           </div>
 
-          {jobsLoading ? (
-            <div className="jobs-loading-customer-orders">
-              <div className="spinner-customer-orders"></div>
-              <p>Loading jobs...</p>
-            </div>
-          ) : jobs.length === 0 ? (
+          {!order.items || order.items.length === 0 ? (
             <div className="no-jobs-customer-orders">
               <BsBoxSeam className="no-data-icon-customer-orders" />
-              <p>No jobs found for this customer</p>
+              <p>No items found in this order</p>
             </div>
           ) : (
             <div className="jobs-grid-customer-orders">
-              {jobs.map((job) => (
-                <div key={job._id} className="job-card-customer-orders">
+              {order.items.map((item, index) => (
+                <div key={index} className="job-card-customer-orders">
                   <div className="job-card-header-customer-orders">
                     <div className="job-title-section-customer-orders">
-                      <h4 className="job-bill-customer-orders">{job.billNumber}</h4>
-                      <span className="job-date-customer-orders">{formatDate(job.date)}</span>
+                      <h4 className="job-bill-customer-orders">{item.itemName}</h4>
                     </div>
-                    <button 
-                      className="view-job-btn-customer-orders"
-                      onClick={() => navigate(`/job-details/${job._id}`)}
-                    >
-                      View <FiChevronRight />
-                    </button>
                   </div>
 
                   <div className="job-works-preview-customer-orders">
-                    {job.works?.map((work, idx) => (
-                      <div key={idx} className="work-preview-item-customer-orders">
-                        <span className="work-name-customer-orders">{work.name}</span>
-                        <span className="work-qty-customer-orders">Qty: {work.qty}</span>
-                        {work.materials?.length > 0 && (
-                          <span className="materials-count-customer-orders">
-                            {work.materials.length} materials
-                          </span>
-                        )}
+                    <div className="work-preview-item-customer-orders">
+                      <span className="work-name-customer-orders">Quantity:</span>
+                      <span className="work-qty-customer-orders">{item.quantity}</span>
+                    </div>
+                    <div className="work-preview-item-customer-orders">
+                      <span className="work-name-customer-orders">Unit Price:</span>
+                      <span className="work-rate-customer-orders">{formatCurrency(item.unitPrice)}</span>
+                    </div>
+                    {item.notes && (
+                      <div className="work-preview-item-customer-orders full-width">
+                        <span className="work-name-customer-orders">Notes:</span>
+                        <span className="work-notes-customer-orders">{item.notes}</span>
                       </div>
-                    ))}
+                    )}
                   </div>
 
                   <div className="job-card-footer-customer-orders">
                     <div className="job-total-customer-orders">
                       <span>Total:</span>
-                      <strong>{formatCurrency(job.total)}</strong>
+                      <strong>{formatCurrency(item.totalPrice)}</strong>
                     </div>
-                    {job.estimatedAmounts && (
-                      <div className="job-estimate-customer-orders">
-                        Est: {formatCurrency(job.estimatedAmounts.low)} - {formatCurrency(job.estimatedAmounts.high)}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
-        {/* Estimated Amounts Section */}
-        {order.estimatedAmounts && (
-          <div className="estimates-section-customer-orders">
-            <div className="section-header-customer-orders">
-              <h3>Estimated Amounts</h3>
-            </div>
-            <div className="estimates-grid-customer-orders">
-              {order.estimatedAmounts.low && (
-                <div className="estimate-card-customer-orders low">
-                  <span className="estimate-label">Low Estimate</span>
-                  <span className="estimate-value">{formatCurrency(order.estimatedAmounts.low)}</span>
-                </div>
-              )}
-              {order.estimatedAmounts.medium && (
-                <div className="estimate-card-customer-orders medium">
-                  <span className="estimate-label">Medium Estimate</span>
-                  <span className="estimate-value">{formatCurrency(order.estimatedAmounts.medium)}</span>
-                </div>
-              )}
-              {order.estimatedAmounts.high && (
-                <div className="estimate-card-customer-orders high">
-                  <span className="estimate-label">High Estimate</span>
-                  <span className="estimate-value">{formatCurrency(order.estimatedAmounts.high)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-    
 
         {/* EXPENSES SECTION */}
         <div className="expenses-section-customer-orders">
@@ -1312,7 +1229,6 @@ const CustomerOrders = () => {
                     </span>
                   </div>
                   
-                  {/* Show max payment amount */}
                   <div className="info-row-customer-orders max-payment-row">
                     <span>Maximum Payment:</span>
                     <span className="amount-customer-orders max-payment">

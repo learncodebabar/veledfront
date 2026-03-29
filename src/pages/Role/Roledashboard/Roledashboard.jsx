@@ -1,12 +1,11 @@
 
 import React from 'react'
-
+import Sidebar from '../../../components/Sidebar/Sidebar'
+ 
 const Roledashboard = () => {
   return (
     <div>
-      <h1>
-        bbj
-      </h1>
+   <Sidebar/>
     </div>
   )
 }

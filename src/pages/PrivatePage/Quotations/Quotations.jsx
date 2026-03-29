@@ -1,15 +1,18 @@
+// src/pages/PrivatePage/AllQuotations/AllQuotations.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FiFileText, FiPlus, FiSearch, 
   FiEye, FiDownload, FiEdit2, FiTrash2,
   FiUser, FiPackage, FiCheckCircle,
-  FiXCircle, FiClock, FiRefreshCw
+  FiXCircle, FiClock, FiRefreshCw, FiShoppingBag,
+  FiCalendar, FiDollarSign, FiCreditCard, FiX,
+  FiChevronDown
 } from 'react-icons/fi';
 import Sidebar from '../../../components/Sidebar/Sidebar';
 import { getAllQuotations, deleteQuotation } from '../../../api/quotationApi';
 import './Quotations.css';
-//hell
+
 const AllQuotations = () => {
   const navigate = useNavigate();
   
@@ -23,9 +26,9 @@ const AllQuotations = () => {
   const [selectedQuotation, setSelectedQuotation] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
-  // Status options
+  // Quotation status options - removed 'converted' from visible options
   const statusOptions = [
-    { value: 'all', label: 'All Status' },
+    { value: 'all', label: 'All' },
     { value: 'draft', label: 'Draft' },
     { value: 'sent', label: 'Sent' },
     { value: 'accepted', label: 'Accepted' },
@@ -48,9 +51,18 @@ const AllQuotations = () => {
     try {
       setLoading(true);
       const response = await getAllQuotations();
+      console.log("Quotations response:", response);
+      
+      let quotationsData = [];
       if (response.data && response.data.success) {
-        setQuotations(response.data.data);
+        quotationsData = response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        quotationsData = response.data;
+      } else if (Array.isArray(response)) {
+        quotationsData = response;
       }
+      
+      setQuotations(quotationsData);
     } catch (error) {
       console.error('Error fetching quotations:', error);
       showToast('Failed to load quotations', 'error');
@@ -59,9 +71,10 @@ const AllQuotations = () => {
     }
   };
 
-  // Filter quotations based on search and status
+  // Filter quotations - EXCLUDE converted quotations by default
   const filterQuotations = () => {
-    let filtered = [...quotations];
+    // First filter out converted quotations
+    let filtered = quotations.filter(q => q.status !== 'converted');
 
     if (searchTerm) {
       filtered = filtered.filter(q => 
@@ -85,7 +98,19 @@ const AllQuotations = () => {
 
   // Format currency
   const formatCurrency = (amount) => {
-    return `Rs ${Number(amount).toFixed(2)}`;
+    if (!amount && amount !== 0) return "Rs 0";
+    return `Rs ${Number(amount).toLocaleString('en-PK')}`;
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PK', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   // Get status badge class
@@ -112,6 +137,41 @@ const AllQuotations = () => {
     }
   };
 
+  // Handle Convert to Order
+  const handleConvertToOrder = (e, quotation) => {
+    e.stopPropagation();
+    
+    // Check if already converted
+    if (quotation.status === 'converted') {
+      showToast('This quotation has already been converted to an order', 'error');
+      return;
+    }
+    
+    const quotationData = {
+      _id: quotation._id,
+      quotationNumber: quotation.quotationNumber,
+      customer: quotation.customer,
+      customerName: quotation.customerName,
+      customerPhone: quotation.customerPhone,
+      customerAddress: quotation.customerAddress,
+      items: quotation.items || [],
+      grandTotal: quotation.grandTotal,
+      estimate: quotation.estimate || { low: 0, medium: 0, high: 0 },
+      notes: quotation.notes || '',
+      createdAt: quotation.createdAt
+    };
+    
+    console.log('Converting quotation to order:', quotationData);
+    
+    // Navigate to Quotation Order page
+    navigate('/quotation-to-order', { 
+      state: { 
+        quotationData: quotationData,
+        isFromQuotation: true 
+      } 
+    });
+  };
+
   // Handle view quotation
   const handleView = (id) => {
     navigate(`/quotations/${id}`);
@@ -125,6 +185,14 @@ const AllQuotations = () => {
   // Handle delete quotation
   const handleDelete = async () => {
     if (!selectedQuotation) return;
+    
+    // Check if already converted
+    if (selectedQuotation.status === 'converted') {
+      showToast('Cannot delete a converted quotation', 'error');
+      setShowDeleteModal(false);
+      setSelectedQuotation(null);
+      return;
+    }
     
     try {
       const response = await deleteQuotation(selectedQuotation._id);
@@ -230,14 +298,14 @@ const AllQuotations = () => {
               <FiFileText className="all-quotations-empty-icon" />
               <h3>No quotations found</h3>
               <p>
-                {quotations.length === 0 
-                  ? 'Create your first quotation to get started' 
+                {quotations.filter(q => q.status !== 'converted').length === 0 
+                  ? 'No active quotations available. Converted quotations are hidden.' 
                   : 'Try adjusting your filters'}
               </p>
-              {quotations.length === 0 && (
+              {quotations.filter(q => q.status !== 'converted').length === 0 && (
                 <button 
                   className="all-quotations-btn-primary"
-                  onClick={() => navigate('/quotations/add')}
+                  onClick={() => navigate('/QuotationCustomer')}
                 >
                   <FiPlus /> Create Quotation
                 </button>
@@ -250,21 +318,21 @@ const AllQuotations = () => {
                   <th>Quotation #</th>
                   <th>Customer</th>
                   <th>Items</th>
+                  <th>Total</th>
+                  <th>Estimate</th>
                   <th>Status</th>
                   <th>Actions</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {filteredQuotations.map((quotation) => (
                   <tr key={quotation._id}>
-                    {/* Quotation # Column */}
                     <td className="all-quotations-number">
                       <span className="all-quotations-number-badge">
                         {quotation.quotationNumber || 'Q-xxxx'}
                       </span>
                     </td>
 
-                    {/* Customer Column */}
                     <td>
                       <div className="all-quotations-customer-info">
                         <FiUser className="all-quotations-customer-icon" />
@@ -272,7 +340,6 @@ const AllQuotations = () => {
                       </div>
                     </td>
 
-                    {/* Items Column */}
                     <td>
                       <div className="all-quotations-items-info">
                         <FiPackage className="all-quotations-items-icon" />
@@ -280,14 +347,33 @@ const AllQuotations = () => {
                           <span className="all-quotations-items-count">
                             {quotation.items?.length || 0} Items
                           </span>
-                          <span className="all-quotations-items-total">
-                            {formatCurrency(quotation.grandTotal)}
-                          </span>
                         </div>
                       </div>
                     </td>
 
-                    {/* Status Column */}
+                    <td>
+                      <span className="all-quotations-total">
+                        {formatCurrency(quotation.grandTotal)}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="all-quotations-estimate">
+                        {quotation.estimate?.low && (
+                          <span className="estimate-low">L: {formatCurrency(quotation.estimate.low)}</span>
+                        )}
+                        {quotation.estimate?.medium && (
+                          <span className="estimate-medium">M: {formatCurrency(quotation.estimate.medium)}</span>
+                        )}
+                        {quotation.estimate?.high && (
+                          <span className="estimate-high">H: {formatCurrency(quotation.estimate.high)}</span>
+                        )}
+                        {!quotation.estimate?.low && !quotation.estimate?.medium && !quotation.estimate?.high && (
+                          <span className="estimate-none">-</span>
+                        )}
+                      </div>
+                    </td>
+
                     <td>
                       <span className={`all-quotations-status-badge ${getStatusBadge(quotation.status)}`}>
                         {getStatusIcon(quotation.status)}
@@ -295,7 +381,6 @@ const AllQuotations = () => {
                       </span>
                     </td>
 
-                    {/* Actions Column */}
                     <td>
                       <div className="all-quotations-action-buttons">
                         <button 
@@ -320,6 +405,13 @@ const AllQuotations = () => {
                           <FiDownload />
                         </button>
                         <button 
+                          className="all-quotations-btn-icon all-quotations-convert" 
+                          onClick={(e) => handleConvertToOrder(e, quotation)}
+                          title="Convert to Order"
+                        >
+                          <FiShoppingBag />
+                        </button>
+                        <button 
                           className="all-quotations-btn-icon all-quotations-delete" 
                           onClick={() => {
                             setSelectedQuotation(quotation);
@@ -339,7 +431,7 @@ const AllQuotations = () => {
         </div>
 
         {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
+        {showDeleteModal && selectedQuotation && (
           <div className="all-quotations-modal-overlay">
             <div className="all-quotations-modal-content">
               <h3>Delete Quotation</h3>

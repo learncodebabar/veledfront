@@ -1,0 +1,986 @@
+/* src/pages/PrivatePage/CreateQuotationOrder/CreateQuotationOrder.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ============================================ */
+/* Main Container */
+/* ============================================ */
+.main-container-quotation-order {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-color);
+  font-family: var(--font-primary);
+}
+
+.content-wrapper-quotation-order {
+  flex: 1;
+  margin-left: 250px;
+  padding: 2rem;
+  overflow-y: auto;
+  min-height: 100vh;
+  width: calc(100% - 250px);
+  background-color: var(--bg-color);
+  transition: all 0.3s ease;
+}
+
+.create-order-card-quotation-order {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ============================================ */
+/* Header Section */
+/* ============================================ */
+.page-header-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-title-quotation-order {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-icon-quotation-order {
+  font-size: 2rem;
+  color: var(--primary-color);
+}
+
+.header-title-quotation-order h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.back-btn-quotation-order {
+  padding: 0.6rem 1.2rem;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.back-btn-quotation-order:hover {
+  background: var(--off-white);
+  border-color: var(--border-dark);
+  transform: translateY(-2px);
+}
+
+/* ============================================ */
+/* Quotation Banner */
+/* ============================================ */
+.quotation-banner-quotation-order {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-dark));
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-light);
+  box-shadow: var(--card-shadow);
+}
+
+.banner-icon-quotation-order {
+  font-size: 1.5rem;
+}
+
+.banner-content-quotation-order {
+  flex: 1;
+}
+
+.banner-content-quotation-order strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.banner-content-quotation-order span {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+/* ============================================ */
+/* Section Cards */
+/* ============================================ */
+.section-card-quotation-order {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.section-card-quotation-order:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.section-title-quotation-order {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.section-icon-quotation-order {
+  font-size: 1.25rem;
+  background: var(--light-gray);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+/* ============================================ */
+/* Customer Information Card */
+/* ============================================ */
+.customer-info-card-quotation-order {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--primary-gradient);
+  padding: 1.5rem;
+  border-radius: 20px;
+  color: var(--text-light);
+  flex-wrap: wrap;
+}
+
+.customer-avatar-quotation-order {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.customer-details-quotation-order {
+  flex: 1;
+}
+
+.customer-details-quotation-order h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.customer-details-quotation-order p {
+  margin: 0.25rem 0;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.info-icon-quotation-order {
+  font-size: 0.875rem;
+}
+
+/* ============================================ */
+/* Items Section */
+/* ============================================ */
+.items-list-quotation-order {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.quotation-item-card-quotation-order {
+  background: var(--off-white);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.quotation-item-card-quotation-order:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.item-header-quotation-order {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.item-title-quotation-order {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.item-notes-quotation-order {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.materials-list-quotation-order {
+  margin-top: 0.5rem;
+}
+
+.materials-table-quotation-order {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.materials-table-quotation-order th {
+  text-align: left;
+  padding: 0.5rem;
+  background: var(--light-gray);
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.materials-table-quotation-order td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.total-cell-quotation-order {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.item-subtotal-quotation-order {
+  text-align: right;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px dashed var(--border-dark);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.items-count-badge-quotation-order {
+  margin-left: auto;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.empty-items-quotation-order {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+.empty-icon-quotation-order {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* ============================================ */
+/* Estimate Grid */
+/* ============================================ */
+.estimate-grid-quotation-order {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.estimate-card {
+  padding: 1rem;
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.estimate-card.low {
+  background: var(--success-light);
+  color: var(--success-color);
+}
+
+.estimate-card.medium {
+  background: var(--warning-light);
+  color: var(--warning-color);
+}
+
+.estimate-card.high {
+  background: var(--error-light);
+  color: var(--error-color);
+}
+
+.estimate-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow);
+}
+
+.estimate-label {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.estimate-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* ============================================ */
+/* Quotation Total */
+/* ============================================ */
+.quotation-total-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--light-gray);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.quotation-total-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* ============================================ */
+/* Payment Grid */
+/* ============================================ */
+.payment-grid-quotation-order {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group-quotation-order {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group-quotation-order label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.input-icon-quotation-order {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.required-quotation-order {
+  color: var(--error-color);
+  margin-left: 0.25rem;
+}
+
+.field-hint-quotation-order {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.final-total-input-quotation-order,
+.advance-input-quotation-order,
+.date-input-quotation-order,
+.notes-input-quotation-order {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  background: var(--white);
+  color: var(--text-primary);
+}
+
+.final-total-input-quotation-order:focus,
+.advance-input-quotation-order:focus,
+.date-input-quotation-order:focus,
+.notes-input-quotation-order:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.remaining-display-quotation-order {
+  padding: 0.75rem 1rem;
+  background: var(--light-gray);
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ============================================ */
+/* Order Details Grid */
+/* ============================================ */
+.order-details-grid-quotation-order {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.full-width-quotation-order {
+  grid-column: 1 / -1;
+}
+
+/* ============================================ */
+/* Custom Status Select */
+/* ============================================ */
+.custom-status-select-quotation-order {
+  position: relative;
+  width: 100%;
+}
+
+.selected-status-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.selected-status-quotation-order:hover {
+  border-color: var(--primary-color);
+  background: var(--off-white);
+}
+
+.selected-status-quotation-order.open {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.selected-status-content-quotation-order {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-arrow-quotation-order {
+  transition: transform 0.2s ease;
+}
+
+.dropdown-arrow-quotation-order.rotate {
+  transform: rotate(180deg);
+}
+
+.status-dropdown-quotation-order {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-top: 0.25rem;
+  box-shadow: var(--card-shadow);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.status-option-quotation-order {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-option-quotation-order:hover {
+  background: var(--light-gray);
+}
+
+.status-option-quotation-order.selected {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.check-icon-quotation-order {
+  margin-left: auto;
+  color: var(--primary-color);
+}
+
+/* ============================================ */
+/* Payment Summary */
+/* ============================================ */
+.payment-summary-quotation-order {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+}
+
+.summary-row-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.total-row-quotation-order {
+  font-weight: 600;
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  color: var(--text-primary);
+}
+
+.advance-amount-quotation-order {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.remaining-amount-quotation-order {
+  font-weight: 700;
+}
+
+.remaining-amount-quotation-order.paid {
+  color: var(--success-color);
+}
+
+.remaining-amount-quotation-order.pending {
+  color: var(--warning-color);
+}
+
+.payment-status-row-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.payment-status-badge-quotation-order {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.payment-status-badge-quotation-order.paid {
+  background: var(--success-light);
+  color: var(--success-color);
+}
+
+.payment-status-badge-quotation-order.partial {
+  background: var(--warning-light);
+  color: var(--warning-color);
+}
+
+.payment-status-badge-quotation-order.pending {
+  background: var(--error-light);
+  color: var(--error-color);
+}
+
+/* ============================================ */
+/* Grand Total Card */
+/* ============================================ */
+.grand-total-card-quotation-order {
+  background: var(--primary-gradient);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  color: var(--text-light);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.grand-total-card-quotation-order::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.grand-total-content-quotation-order {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.grand-total-label-quotation-order {
+  font-size: 1.25rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.grand-total-amount-quotation-order {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* ============================================ */
+/* Create Order Button */
+/* ============================================ */
+.create-order-btn-quotation-order {
+  width: 100%;
+  background: var(--success-gradient);
+  color: var(--text-light);
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.create-order-btn-quotation-order:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.4);
+}
+
+.create-order-btn-quotation-order:disabled {
+  background: linear-gradient(135deg, var(--dark-gray), var(--secondary-dark));
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.spinning-quotation-order {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================ */
+/* Toast Message */
+/* ============================================ */
+.toast-message-quotation-order {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 9999;
+  min-width: 280px;
+  max-width: 400px;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--card-shadow);
+  animation: slideInRight 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.toast-message-quotation-order.success {
+  background: var(--success-gradient);
+  color: var(--text-light);
+}
+
+.toast-message-quotation-order.error {
+  background: var(--warning-gradient);
+  color: var(--text-light);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.toast-content-quotation-order {
+  flex: 1;
+}
+
+.toast-text-quotation-order {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+}
+
+.toast-close-quotation-order {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: var(--text-light);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.75rem;
+}
+
+.toast-close-quotation-order:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* ============================================ */
+/* Error Container */
+/* ============================================ */
+.error-container-quotation-order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  background: var(--white);
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: var(--card-shadow);
+}
+
+.error-icon-quotation-order {
+  font-size: 3rem;
+  color: var(--error-color);
+  margin-bottom: 1rem;
+}
+
+.error-container-quotation-order h2 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.error-container-quotation-order p {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+/* ============================================ */
+/* Responsive Design */
+/* ============================================ */
+@media (max-width: 1024px) {
+  .content-wrapper-quotation-order {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-wrapper-quotation-order {
+    margin-left: 0;
+    width: 100%;
+    padding: 1rem;
+  }
+  
+  .page-header-quotation-order {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .customer-info-card-quotation-order {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .estimate-grid-quotation-order {
+    grid-template-columns: 1fr;
+  }
+  
+  .payment-grid-quotation-order {
+    grid-template-columns: 1fr;
+  }
+  
+  .order-details-grid-quotation-order {
+    grid-template-columns: 1fr;
+  }
+  
+  .grand-total-content-quotation-order {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .grand-total-amount-quotation-order {
+    font-size: 1.5rem;
+  }
+  
+  .section-card-quotation-order {
+    padding: 1rem;
+  }
+  
+  .materials-table-quotation-order {
+    font-size: 0.75rem;
+  }
+  
+  .materials-table-quotation-order th,
+  .materials-table-quotation-order td {
+    padding: 0.375rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-wrapper-quotation-order {
+    padding: 0.75rem;
+  }
+  
+  .section-card-quotation-order {
+    padding: 0.875rem;
+  }
+  
+  .customer-avatar-quotation-order {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+  
+  .customer-details-quotation-order h3 {
+    font-size: 1rem;
+  }
+  
+  .customer-details-quotation-order p {
+    font-size: 0.75rem;
+  }
+  
+  .estimate-card {
+    padding: 0.75rem;
+  }
+  
+  .estimate-value {
+    font-size: 0.9rem;
+  }
+  
+  .grand-total-amount-quotation-order {
+    font-size: 1.25rem;
+  }
+  
+  .create-order-btn-quotation-order {
+    font-size: 0.875rem;
+    padding: 0.875rem 1rem;
+  }
+  
+  .toast-message-quotation-order {
+    left: 1rem;
+    right: 1rem;
+    min-width: auto;
+  }
+}
+
+/* ============================================ */
+/* Scrollbar Styling */
+/* ============================================ */
+.content-wrapper-quotation-order::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content-wrapper-quotation-order::-webkit-scrollbar-track {
+  background: var(--light-gray);
+  border-radius: 4px;
+}
+
+.content-wrapper-quotation-order::-webkit-scrollbar-thumb {
+  background: var(--gray);
+  border-radius: 4px;
+}
+
+.content-wrapper-quotation-order::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-gray);
+}
+
+/* ============================================ */
+/* Loading State */
+/* ============================================ */
+.loading-container-quotation-order {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  background: var(--white);
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: var(--card-shadow);
+}
+
+.loading-container-quotation-order .spinning {
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.loading-container-quotation-order p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
