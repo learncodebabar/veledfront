@@ -592,7 +592,7 @@ const PrintQuotation = () => {
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl;
     }
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const baseUrl = import.meta.env.VITE_API_URL ;
     let cleanUrl = imageUrl.replace(/^\.\.\/|^\.\//, '');
     if (!cleanUrl.startsWith('/')) {
       cleanUrl = '/' + cleanUrl;
