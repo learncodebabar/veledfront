@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx - Update the login function
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -17,25 +18,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // مباشرة localStorage سے لوڈ کریں
     const loadFromStorage = () => {
       try {
         console.log('Loading from storage...');
         
-        // Role token پہلے چیک کریں
         const roleToken = localStorage.getItem('roleToken');
         const roleUserStr = localStorage.getItem('roleUser');
         const adminToken = localStorage.getItem('adminToken');
         const adminUserStr = localStorage.getItem('adminUser');
         
-        console.log('Storage check:', { 
-          roleToken: !!roleToken, 
-          roleUser: !!roleUserStr,
-          adminToken: !!adminToken,
-          adminUser: !!adminUserStr
-        });
-
-        // Role user
         if (roleToken && roleUserStr) {
           try {
             const roleUser = JSON.parse(roleUserStr);
@@ -47,7 +38,6 @@ export const AuthProvider = ({ children }) => {
             console.error('Error parsing role user:', e);
           }
         }
-        // Admin user
         else if (adminToken && adminUserStr) {
           try {
             const adminUser = JSON.parse(adminUserStr);
@@ -59,9 +49,6 @@ export const AuthProvider = ({ children }) => {
             console.error('Error parsing admin user:', e);
           }
         }
-        else {
-          console.log('No user found in storage');
-        }
       } catch (error) {
         console.error('Error in loadFromStorage:', error);
       } finally {
@@ -70,29 +57,31 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadFromStorage();
-  }, []); // Empty array - صرف ایک بار چلے گا
+  }, []);
 
   const login = (userData, userToken, type) => {
     console.log('Login called:', { userData, type });
     
-    // پہلے سب صاف کریں
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     localStorage.removeItem('roleToken');
     localStorage.removeItem('roleUser');
     localStorage.removeItem('userType');
     
-    // نیا ڈیٹا save کریں
     if (type === 'admin') {
       localStorage.setItem('adminToken', userToken);
       localStorage.setItem('adminUser', JSON.stringify(userData));
     } else {
       localStorage.setItem('roleToken', userToken);
-      localStorage.setItem('roleUser', JSON.stringify(userData));
+      // ✅ Store user with permissions array
+      const userToStore = {
+        ...userData,
+        permissionsArray: userData.permissionsArray || userData.permissions || []
+      };
+      localStorage.setItem('roleUser', JSON.stringify(userToStore));
     }
     localStorage.setItem('userType', type);
     
-    // State update
     setUser(userData);
     setToken(userToken);
     setUserType(type);
@@ -112,7 +101,6 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUserType(null);
     
-    // Redirect to login
     window.location.href = '/';
   };
 

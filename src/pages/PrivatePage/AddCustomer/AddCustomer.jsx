@@ -26,13 +26,6 @@ export default function AddCustomer() {
   // BUSINESS PROFILE
   const [businessProfile, setBusinessProfile] = useState(null);
 
-  // ESTIMATED AMOUNTS (Low, Medium, High)
-  const [estimatedAmounts, setEstimatedAmounts] = useState({
-    low: "",
-    medium: "",
-    high: ""
-  });
-
   // WORK ITEMS & MATERIALS COMBINED
   const [workName, setWorkName] = useState("");
   const [workQty, setWorkQty] = useState(1);
@@ -131,7 +124,6 @@ export default function AddCustomer() {
       setCustomerId(null);
       setCustomerSaved(false);
       setAllItems([]);
-      setEstimatedAmounts({ low: "", medium: "", high: "" });
       return;
     }
     
@@ -268,15 +260,6 @@ export default function AddCustomer() {
           }));
           
           setAllItems(processedWorks);
-        }
-        
-        // Load estimated amounts if they exist
-        if (latestJob.estimatedAmounts) {
-          setEstimatedAmounts({
-            low: latestJob.estimatedAmounts.low || "",
-            medium: latestJob.estimatedAmounts.medium || "",
-            high: latestJob.estimatedAmounts.high || ""
-          });
         }
         
         showToast('Customer jobs loaded', 'success');
@@ -644,12 +627,6 @@ export default function AddCustomer() {
     return `Rs ${Number(amount).toFixed(2)}`;
   };
 
-  // Format estimated amount
-  const formatEstimatedAmount = (amount) => {
-    if (!amount) return '';
-    return `Rs ${Number(amount).toFixed(2)}`;
-  };
-
   // Updated Print Function - uses latest data
   const printBillDirect = (billData) => {
     const profile = businessProfile;
@@ -952,16 +929,6 @@ export default function AddCustomer() {
           <span class="print-grand-total-value">${formatCurrency(printGrandTotal)}</span>
         </div>
 
-        <!-- Estimated Amounts -->
-        ${(billData.estimatedAmounts && Object.keys(billData.estimatedAmounts).length > 0) || estimatedAmounts.low || estimatedAmounts.medium || estimatedAmounts.high ? `
-          <div style="background: #f8fafc; padding: 12px 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #2563eb;">
-            <strong>Estimated Amounts:</strong><br>
-            ${(billData.estimatedAmounts?.low || estimatedAmounts.low) ? `Low: ${formatCurrency(billData.estimatedAmounts?.low || estimatedAmounts.low)}<br>` : ''}
-            ${(billData.estimatedAmounts?.medium || estimatedAmounts.medium) ? `Medium: ${formatCurrency(billData.estimatedAmounts?.medium || estimatedAmounts.medium)}<br>` : ''}
-            ${(billData.estimatedAmounts?.high || estimatedAmounts.high) ? `High: ${formatCurrency(billData.estimatedAmounts?.high || estimatedAmounts.high)}` : ''}
-          </div>
-        ` : ''}
-
         <!-- Footer -->
         <div class="print-footer">
           ${profile?.footerNote ? `<div class="print-footer-note">${profile.footerNote}</div>` : ''}
@@ -1015,12 +982,6 @@ export default function AddCustomer() {
         };
       });
 
-      // Only include estimated amounts that have values
-      const estimatedAmountsToSend = {};
-      if (estimatedAmounts.low) estimatedAmountsToSend.low = Number(estimatedAmounts.low);
-      if (estimatedAmounts.medium) estimatedAmountsToSend.medium = Number(estimatedAmounts.medium);
-      if (estimatedAmounts.high) estimatedAmountsToSend.high = Number(estimatedAmounts.high);
-
       // Calculate final grand total
       const finalGrandTotal = works.reduce((sum, work) => {
         const workTotal = work.materials.reduce((matSum, mat) => matSum + mat.total, 0);
@@ -1031,7 +992,6 @@ export default function AddCustomer() {
         customer: customer._id || customer.id || customerId,
         works: works,
         total: finalGrandTotal,
-        estimatedAmounts: estimatedAmountsToSend,
         billNumber: 'BILL-' + Math.floor(Math.random() * 10000),
         date: new Date().toLocaleString('en-PK')
       };
@@ -1075,8 +1035,7 @@ export default function AddCustomer() {
           businessProfile: businessProfile,
           total: finalGrandTotal,
           billNumber: billData.billNumber,
-          date: billData.date,
-          estimatedAmounts: estimatedAmountsToSend
+          date: billData.date
         };
 
         // Refresh saved bills list
@@ -1120,9 +1079,6 @@ export default function AddCustomer() {
     setSavedBillData(null);
     navigate('/admin-all-customer');
   };
-
-  // Check if any estimated amount is filled
-  const hasEstimatedAmounts = estimatedAmounts.low || estimatedAmounts.medium || estimatedAmounts.high;
 
   return (
     <div className="main-container-Customer">
@@ -1232,24 +1188,6 @@ export default function AddCustomer() {
                     <div className="success-grand-total">
                       <span>GRAND TOTAL:</span>
                       <span className="success-grand-total-value">{formatCurrency(savedBillData.total || grandTotal)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Estimated Amounts */}
-                {savedBillData.estimatedAmounts && Object.keys(savedBillData.estimatedAmounts).length > 0 && (
-                  <div className="bill-section-Customer">
-                    <h3>Estimated Amounts</h3>
-                    <div className="estimated-preview">
-                      {savedBillData.estimatedAmounts.low && (
-                        <p><strong>Low:</strong> {formatCurrency(savedBillData.estimatedAmounts.low)}</p>
-                      )}
-                      {savedBillData.estimatedAmounts.medium && (
-                        <p><strong>Medium:</strong> {formatCurrency(savedBillData.estimatedAmounts.medium)}</p>
-                      )}
-                      {savedBillData.estimatedAmounts.high && (
-                        <p><strong>High:</strong> {formatCurrency(savedBillData.estimatedAmounts.high)}</p>
-                      )}
                     </div>
                   </div>
                 )}
@@ -1672,68 +1610,6 @@ export default function AddCustomer() {
               <div className="total-breakdown-Customer">
                 <span>Total Works: {allItems.length}</span>
                 <span>Total Quantity: {allItems.reduce((sum, item) => sum + item.qty, 0)}</span>
-              </div>
-            )}
-          </div>
-         
-          {/* Estimated Amounts Section */}
-          <div className="section-card-Customer">
-            <h2 className="section-title-Customer">
-              <span className="section-icon-Customer">💰</span>
-              Estimated Costs
-            </h2>
-            <div className="estimated-amounts-grid">
-              <div className="form-group-Customer">
-                <label>Low Estimate (Rs)</label>
-                <input
-                  type="number"
-                  placeholder="Enter low estimate"
-                  value={estimatedAmounts.low}
-                  onChange={e => setEstimatedAmounts({ ...estimatedAmounts, low: e.target.value })}
-                  min="0"
-                  step="1000"
-                  className="estimated-low-add-customer"
-                  disabled={!customerSaved}
-                />
-              </div>
-              <div className="form-group-Customer">
-                <label>Medium Estimate (Rs)</label>
-                <input
-                  type="number"
-                  placeholder="Enter medium estimate"
-                  value={estimatedAmounts.medium}
-                  onChange={e => setEstimatedAmounts({ ...estimatedAmounts, medium: e.target.value })}
-                  min="0"
-                  step="1000"
-                  className="estimated-medium-add-customer"
-                  disabled={!customerSaved}
-                />
-              </div>
-              <div className="form-group-Customer">
-                <label>High Estimate (Rs)</label>
-                <input
-                  type="number"
-                  placeholder="Enter high estimate"
-                  value={estimatedAmounts.high}
-                  onChange={e => setEstimatedAmounts({ ...estimatedAmounts, high: e.target.value })}
-                  min="0"
-                  step="1000"
-                  className="estimated-high-add-customer"
-                  disabled={!customerSaved}
-                />
-              </div>
-            </div>
-            {hasEstimatedAmounts && (
-              <div className="estimated-summary">
-                <p className="estimated-note">
-                  <span className="estimated-dot low"></span> Low: {formatEstimatedAmount(estimatedAmounts.low)}
-                </p>
-                <p className="estimated-note">
-                  <span className="estimated-dot medium"></span> Medium: {formatEstimatedAmount(estimatedAmounts.medium)}
-                </p>
-                <p className="estimated-note">
-                  <span className="estimated-dot high"></span> High: {formatEstimatedAmount(estimatedAmounts.high)}
-                </p>
               </div>
             )}
           </div>

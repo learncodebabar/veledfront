@@ -1,4 +1,4 @@
-/* Dashboard.css - Clean Flat Layout (No Gradients, No Shadows) */
+/* Dashboard.css - Enhanced with Flexbox for 4 Cards in a Row */
 
 /* ============================================ */
 /* Base Styles */
@@ -16,195 +16,7 @@
   font-family: var(--font-primary);
   position: relative;
 }
-/* Add these styles to Dashboard.css */
 
-/* Chart Section */
-.dashboard__chart-section {
-  margin-bottom: 1.5rem;
-}
-
-.dashboard__chart-card {
-  background: var(--white);
-  border-radius: 24px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-  transition: all 0.2s ease;
-  flex: 1;
-}
-
-.dashboard__chart-card--full {
-  width: 100%;
-}
-
-.dashboard__chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.dashboard__chart-header h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.dashboard__chart-legend {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.dashboard__legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.dashboard__legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.dashboard__legend-dot--revenue {
-  background: #2563eb;
-}
-
-.dashboard__legend-dot--expenses {
-  background: #f59e0b;
-}
-
-.dashboard__legend-dot--profit {
-  background: #10b981;
-}
-
-.dashboard__chart-wrapper {
-  width: 100%;
-}
-
-.dashboard__chart-wrapper--pie {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Pie Stats */
-.dashboard__pie-stats {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-}
-
-.dashboard__stat-item {
-  text-align: center;
-  flex: 1;
-}
-
-.dashboard__stat-label {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.dashboard__stat-number {
-  display: block;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-/* Profit Badge */
-.dashboard__profit-badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 0.125rem 0.375rem;
-  border-radius: 20px;
-  margin-left: 0.5rem;
-}
-
-.dashboard__profit-badge.positive {
-  background: #d1fae5;
-  color: #10b981;
-}
-
-.dashboard__profit-badge.negative {
-  background: #fee2e2;
-  color: #ef4444;
-}
-
-/* Order Card Percentage */
-.dashboard__order-percent {
-  display: block;
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  margin-top: 0.125rem;
-}
-
-/* Order Icons */
-.dashboard__order-icon--partial {
-  background: linear-gradient(135deg, #3b82f620, #2563eb10);
-  color: #3b82f6;
-}
-
-/* No Data */
-.dashboard__no-data {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 280px;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-/* Custom Tooltip */
-.dashboard__custom-tooltip {
-  background: var(--white);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.dashboard__tooltip-label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
-}
-
-/* Charts Row */
-.dashboard__charts-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (max-width: 1024px) {
-  .dashboard__charts-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .dashboard__pie-stats {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .dashboard__chart-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
 .dashboard__content {
   flex: 1;
   margin-left: 280px;
@@ -216,12 +28,12 @@
 }
 
 /* ============================================ */
-/* Header Section */
+/* Header with Date Filter */
 /* ============================================ */
 .dashboard__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
@@ -243,53 +55,153 @@
   font-weight: 500;
 }
 
-.dashboard__date-range {
+.dashboard__header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Filter Container */
+.dashboard__filter-container {
+  position: relative;
+}
+
+.dashboard__filter-trigger {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding: 0.6rem 1.2rem;
   background: var(--white);
-  padding: 0.5rem 1rem;
-  border-radius: 16px;
   border: 1px solid var(--border-color);
-}
-
-.dashboard__date-input {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--light-gray);
-  padding: 0.375rem 0.875rem;
   border-radius: 12px;
-}
-
-.dashboard__date-input input {
-  border: none;
-  background: transparent;
+  cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-primary);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dashboard__filter-trigger:hover {
+  border-color: var(--primary-color);
+  background: var(--light-gray);
+}
+
+.dashboard__filter-trigger svg.rotate {
+  transform: rotate(180deg);
+}
+
+.dashboard__filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  min-width: 150px;
+  overflow: hidden;
+}
+
+.dashboard__filter-option {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.dashboard__filter-option:hover {
+  background: var(--light-gray);
+}
+
+.dashboard__filter-option.active {
+  background: var(--primary-light);
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* Date Navigation */
+.dashboard__date-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--white);
+  padding: 0.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.dashboard__nav-btn {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.dashboard__nav-btn:hover {
+  background: var(--light-gray);
+  color: var(--primary-color);
+}
+
+.dashboard__year-select,
+.dashboard__month-select,
+.dashboard__week-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--white);
+  color: var(--text-primary);
+  cursor: pointer;
   outline: none;
   font-family: var(--font-primary);
 }
 
-.dashboard__date-icon {
-  color: var(--text-muted);
-  font-size: 0.875rem;
+.dashboard__year-select:focus,
+.dashboard__month-select:focus,
+.dashboard__week-select:focus {
+  border-color: var(--primary-color);
+  outline: none;
 }
 
-.dashboard__date-separator {
-  color: var(--text-muted);
+.dashboard__date-picker {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   font-size: 0.875rem;
-  font-weight: 500;
+  background: var(--white);
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  font-family: var(--font-primary);
 }
 
-.dashboard__filter-btn {
+.dashboard__date-picker:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.dashboard__refresh-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
+  padding: 0.6rem 1.2rem;
   background: var(--primary-color);
-  color: var(--text-light);
+  color: var(--white);
   border: none;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -298,23 +210,25 @@
   transition: all 0.2s ease;
 }
 
-.dashboard__filter-btn:hover {
+.dashboard__refresh-btn:hover {
   background: var(--primary-dark);
   transform: translateY(-2px);
 }
 
 /* ============================================ */
-/* Financial Cards with Icon Boxes */
+/* Financial Cards - Flexbox */
 /* ============================================ */
 .dashboard__financial-section {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
   margin-bottom: 2rem;
   animation: fadeInUp 0.5s ease 0.1s backwards;
 }
 
 .dashboard__financial-card {
+  flex: 1;
+  min-width: calc(33.333% - 1rem);
   background: var(--white);
   border-radius: 28px;
   padding: 1.5rem;
@@ -325,10 +239,6 @@
   border: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
-}
-
-.dashboard__financial-card:hover {
-  transform: translateY(-2px);
 }
 
 .dashboard__financial-icon {
@@ -345,7 +255,7 @@
 }
 
 .dashboard__financial-card--balance .dashboard__financial-icon {
-  background: var(--primary-light);
+  background: var(--primary-color);
   color: var(--white);
 }
 
@@ -357,10 +267,6 @@
 .dashboard__financial-card--profit .dashboard__financial-icon {
   background: var(--success-color);
   color: var(--white);
-}
-
-.dashboard__financial-card:hover .dashboard__financial-icon {
-  transform: scale(1.02);
 }
 
 .dashboard__financial-content {
@@ -386,7 +292,7 @@
 }
 
 /* ============================================ */
-/* Orders Section with Icon Boxes */
+/* Orders Section - 4 Cards in a Row */
 /* ============================================ */
 .dashboard__orders-section {
   background: var(--white);
@@ -418,7 +324,7 @@
 }
 
 .dashboard__orders-total {
-  background: var(--primary-light);
+  background: var(--primary-color);
   color: var(--white);
   padding: 0.375rem 1rem;
   border-radius: 40px;
@@ -427,12 +333,15 @@
 }
 
 .dashboard__orders-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .dashboard__order-card {
+  flex: 1;
+  min-width: calc(25% - 0.75rem);
   background: var(--light-gray);
   border-radius: 20px;
   padding: 1rem;
@@ -441,13 +350,6 @@
   gap: 1rem;
   transition: all 0.3s ease;
   border: 1px solid transparent;
-  cursor: pointer;
-}
-
-.dashboard__order-card:hover {
-  background: var(--white);
-  border-color: var(--border-color);
-  transform: translateY(-2px);
 }
 
 .dashboard__order-icon {
@@ -462,40 +364,24 @@
   color: var(--white);
 }
 
-.dashboard__order-card:hover .dashboard__order-icon {
-  transform: scale(1.02);
-}
-
 .dashboard__order-icon--ordered {
   background: var(--primary-color);
-}
-
-.dashboard__order-icon--detail {
-  background: #8b5cf6;
 }
 
 .dashboard__order-icon--pending {
   background: var(--warning-color);
 }
 
-.dashboard__order-icon--order {
+.dashboard__order-icon--active {
+  background: var(--info-color);
+}
+
+.dashboard__order-icon--complete {
   background: var(--success-color);
 }
 
 .dashboard__order-icon--delay {
   background: var(--error-color);
-}
-
-.dashboard__order-icon--active {
-  background: var(--info-color);
-}
-
-.dashboard__order-icon--price {
-  background: #f97316;
-}
-
-.dashboard__order-icon--complete {
-  background: var(--success-color);
 }
 
 .dashboard__order-info {
@@ -519,8 +405,126 @@
   color: var(--text-primary);
 }
 
+.dashboard__order-percent {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-top: 0.125rem;
+}
+
 /* ============================================ */
-/* Customer Section with Icon Boxes */
+/* Payment Section - 4 Cards in a Row */
+/* ============================================ */
+.dashboard__payment-section {
+  background: var(--white);
+  border-radius: 28px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.5s ease 0.3s backwards;
+}
+
+.dashboard__payment-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1.25rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard__payment-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dashboard__payment-card {
+  flex: 1;
+  min-width: calc(25% - 0.75rem);
+  border-radius: 20px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+}
+
+.dashboard__payment-card--pending {
+  border-left: 4px solid var(--warning-color);
+}
+
+.dashboard__payment-card--partial {
+  border-left: 4px solid var(--info-color);
+}
+
+.dashboard__payment-card--complete {
+  border-left: 4px solid var(--success-color);
+}
+
+.dashboard__payment-card--warning {
+  border-left: 4px solid #f97316;
+}
+
+.dashboard__payment-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+  color: var(--white);
+}
+
+.dashboard__payment-card--pending .dashboard__payment-icon {
+  background: var(--warning-color);
+}
+
+.dashboard__payment-card--partial .dashboard__payment-icon {
+  background: var(--info-color);
+}
+
+.dashboard__payment-card--complete .dashboard__payment-icon {
+  background: var(--success-color);
+}
+
+.dashboard__payment-card--warning .dashboard__payment-icon {
+  background: #f97316;
+}
+
+.dashboard__payment-info {
+  flex: 1;
+}
+
+.dashboard__payment-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dashboard__payment-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* ============================================ */
+/* Customer Section - 2 Cards in a Row */
 /* ============================================ */
 .dashboard__customer-section {
   background: var(--white);
@@ -529,7 +533,7 @@
   margin-bottom: 1.5rem;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
-  animation: fadeInUp 0.5s ease 0.3s backwards;
+  animation: fadeInUp 0.5s ease 0.4s backwards;
 }
 
 .dashboard__customer-header {
@@ -561,12 +565,14 @@
 }
 
 .dashboard__customer-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
 .dashboard__customer-card {
+  flex: 1;
+  min-width: calc(50% - 0.5rem);
   background: var(--light-gray);
   border-radius: 20px;
   padding: 1rem;
@@ -575,13 +581,6 @@
   gap: 1rem;
   transition: all 0.3s ease;
   border: 1px solid transparent;
-  cursor: pointer;
-}
-
-.dashboard__customer-card:hover {
-  background: var(--white);
-  border-color: var(--border-color);
-  transform: translateY(-2px);
 }
 
 .dashboard__customer-icon {
@@ -595,10 +594,6 @@
   justify-content: center;
   font-size: 1.25rem;
   transition: all 0.3s ease;
-}
-
-.dashboard__customer-card:hover .dashboard__customer-icon {
-  transform: scale(1.02);
 }
 
 .dashboard__customer-info {
@@ -618,133 +613,6 @@
 .dashboard__customer-value {
   display: block;
   font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-/* ============================================ */
-/* Payment Section with Icon Boxes */
-/* ============================================ */
-.dashboard__payment-section {
-  background: var(--white);
-  border-radius: 28px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-  animation: fadeInUp 0.5s ease 0.4s backwards;
-}
-
-.dashboard__payment-header h3 {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 1.25rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.dashboard__payment-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-.dashboard__payment-card {
-  border-radius: 20px;
-  padding: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  background: var(--white);
-  border: 1px solid var(--border-color);
-}
-
-.dashboard__payment-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: currentColor;
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-}
-
-.dashboard__payment-card:hover::before {
-  transform: scaleX(1);
-}
-
-.dashboard__payment-card--pending {
-  border-left: 4px solid var(--warning-color);
-}
-
-.dashboard__payment-card--partial {
-  border-left: 4px solid var(--info-color);
-}
-
-.dashboard__payment-card--complete {
-  border-left: 4px solid var(--success-color);
-}
-
-.dashboard__payment-card:hover {
-  transform: translateY(-2px);
-  background: var(--light-gray);
-}
-
-.dashboard__payment-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  transition: all 0.3s ease;
-  color: var(--white);
-}
-
-.dashboard__payment-card--pending .dashboard__payment-icon {
-  background: var(--warning-color);
-}
-
-.dashboard__payment-card--partial .dashboard__payment-icon {
-  background: var(--info-color);
-}
-
-.dashboard__payment-card--complete .dashboard__payment-icon {
-  background: var(--success-color);
-}
-
-.dashboard__payment-card:hover .dashboard__payment-icon {
-  transform: scale(1.02);
-}
-
-.dashboard__payment-info {
-  flex: 1;
-}
-
-.dashboard__payment-label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.dashboard__payment-value {
-  display: block;
-  font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-primary);
 }
@@ -823,12 +691,7 @@
   padding: 1rem 0.75rem;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
   transition: all 0.2s ease;
-}
-
-.dashboard__table tr:hover td {
-  background: var(--light-gray);
 }
 
 .dashboard__table-order-id {
@@ -861,12 +724,129 @@
   background: var(--warning-color);
 }
 
+.dashboard__status-badge--in-progress {
+  background: var(--info-color);
+}
+
+.dashboard__status-badge--completed {
+  background: var(--success-color);
+}
+
 .dashboard__status-badge--partial {
   background: var(--info-color);
 }
 
-.dashboard__status-badge--complete {
+.dashboard__status-badge--paid {
   background: var(--success-color);
+}
+
+/* ============================================ */
+/* Payment Amount Section - 3 Cards in a Row */
+/* ============================================ */
+.dashboard__payment-amount-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--border-color);
+}
+
+.dashboard__payment-amount-header {
+  margin-bottom: 1rem;
+}
+
+.dashboard__payment-amount-header h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dashboard__payment-amount-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dashboard__payment-amount-card {
+  flex: 1;
+  min-width: calc(33.333% - 0.75rem);
+  background: var(--white);
+  border-radius: 20px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard__payment-amount-card.pending-status {
+  border-left: 4px solid var(--warning-color);
+}
+
+.dashboard__payment-amount-card.progress-status {
+  border-left: 4px solid var(--info-color);
+}
+
+.dashboard__payment-amount-card.completed-status {
+  border-left: 4px solid var(--success-color);
+}
+
+.payment-amount-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: var(--light-gray);
+  color: var(--text-primary);
+}
+
+.dashboard__payment-amount-card.pending-status .payment-amount-icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color);
+}
+
+.dashboard__payment-amount-card.progress-status .payment-amount-icon {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info-color);
+}
+
+.dashboard__payment-amount-card.completed-status .payment-amount-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+}
+
+.payment-amount-info {
+  flex: 1;
+}
+
+.payment-amount-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.payment-amount-value {
+  display: block;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.payment-amount-sub {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
 }
 
 /* ============================================ */
@@ -898,26 +878,6 @@
   margin-bottom: 1rem;
 }
 
-.dashboard__refresh-btn {
-  margin-top: 1rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--primary-color);
-  color: var(--text-light);
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-}
-
-.dashboard__refresh-btn:hover {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
-}
-
 /* ============================================ */
 /* Animations */
 /* ============================================ */
@@ -939,11 +899,19 @@
 }
 
 /* ============================================ */
-/* Responsive Design */
+/* Responsive Design - Flexbox Breakpoints */
 /* ============================================ */
 @media (max-width: 1200px) {
-  .dashboard__orders-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .dashboard__order-card {
+    min-width: calc(33.333% - 0.75rem);
+  }
+  
+  .dashboard__payment-card {
+    min-width: calc(33.333% - 0.75rem);
+  }
+  
+  .dashboard__payment-amount-card {
+    min-width: calc(50% - 0.75rem);
   }
 }
 
@@ -953,20 +921,12 @@
     padding: 1.5rem;
   }
   
-  .dashboard__financial-section {
-    grid-template-columns: 1fr;
+  .dashboard__financial-card {
+    min-width: 100%;
   }
   
-  .dashboard__orders-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .dashboard__customer-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .dashboard__payment-cards {
-    grid-template-columns: 1fr;
+  .dashboard__customer-card {
+    min-width: 100%;
   }
 }
 
@@ -980,18 +940,32 @@
     align-items: flex-start;
   }
   
-  .dashboard__date-range {
+  .dashboard__header-right {
+    flex-direction: column;
     width: 100%;
-    flex-wrap: wrap;
+  }
+  
+  .dashboard__filter-trigger {
+    width: 100%;
     justify-content: space-between;
   }
   
-  .dashboard__orders-grid {
-    grid-template-columns: 1fr;
+  .dashboard__date-navigation {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
   
   .dashboard__order-card {
-    padding: 0.875rem;
+    min-width: calc(50% - 0.5rem);
+  }
+  
+  .dashboard__payment-card {
+    min-width: calc(50% - 0.5rem);
+  }
+  
+  .dashboard__payment-amount-card {
+    min-width: 100%;
   }
   
   .dashboard__financial-value {
@@ -1001,6 +975,14 @@
   .dashboard__payment-value {
     font-size: 1.125rem;
   }
+  
+  .dashboard__year-select,
+  .dashboard__month-select,
+  .dashboard__week-select,
+  .dashboard__date-picker {
+    font-size: 0.75rem;
+    padding: 0.375rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1008,17 +990,12 @@
     padding: 0.75rem;
   }
   
-  .dashboard__date-input {
-    flex: 1;
+  .dashboard__order-card {
+    min-width: 100%;
   }
   
-  .dashboard__date-input input {
-    width: 100%;
-  }
-  
-  .dashboard__filter-btn {
-    width: 100%;
-    justify-content: center;
+  .dashboard__payment-card {
+    min-width: 100%;
   }
   
   .dashboard__financial-card {
@@ -1038,6 +1015,21 @@
   
   .dashboard__order-value,
   .dashboard__customer-value {
+    font-size: 1rem;
+  }
+  
+  .dashboard__refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .payment-amount-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .payment-amount-value {
     font-size: 1rem;
   }
 }
@@ -1063,3 +1055,189 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--dark-gray);
 }
+/* Updated Charts Section Styles - 2 Charts per Row */
+
+/* Charts Section */
+.dashboard__charts-section {
+  margin-top: 2rem;
+  animation: fadeInUp 0.5s ease;
+}
+
+.dashboard__section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.dashboard__section-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard__insights-badge {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  color: white;
+  padding: 0.375rem 1rem;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dashboard__charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.dashboard__chart-card {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard__chart-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  border-color: transparent;
+}
+
+.dashboard__chart-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chart-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.chart-icon-wrapper svg {
+  font-size: 1.5rem;
+  color: white;
+}
+
+.dashboard__chart-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dashboard__chart-header p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+/* Chart Tooltip */
+.dashboard__chart-tooltip {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.dashboard__chart-tooltip-label {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+}
+
+.dashboard__chart-tooltip-item {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Responsive for charts - 2 per row on desktop, 1 per row on mobile */
+@media (max-width: 1024px) {
+  .dashboard__charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard__charts-section {
+    margin-top: 1.5rem;
+  }
+  
+  .dashboard__charts-grid {
+    gap: 1rem;
+  }
+  
+  .dashboard__chart-card {
+    padding: 1rem;
+  }
+  
+  .dashboard__chart-header h3 {
+    font-size: 0.875rem;
+  }
+  
+  .chart-icon-wrapper {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .chart-icon-wrapper svg {
+    font-size: 1.25rem;
+  }
+}
+
+/* Animation for charts */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard__chart-card {
+  animation: fadeInUp 0.5s ease backwards;
+}
+
+.dashboard__chart-card:nth-child(1) { animation-delay: 0.1s; }
+.dashboard__chart-card:nth-child(2) { animation-delay: 0.2s; }
+.dashboard__chart-card:nth-child(3) { animation-delay: 0.3s; }
+.dashboard__chart-card:nth-child(4) { animation-delay: 0.4s; }
+.dashboard__chart-card:nth-child(5) { animation-delay: 0.5s; }

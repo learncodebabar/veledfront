@@ -210,7 +210,7 @@ const EditLabor = () => {
   }
 
   return (
-    <div className="add-labor-container">
+    <div className="add-labor-container sideber-container-Mobile">
       <Sidebar />
       
       <div className="add-labor-content">

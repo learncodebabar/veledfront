@@ -1,49 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-// Get token from localStorage
-const getToken = () => {
-  const adminToken = localStorage.getItem('adminToken');
-  const roleToken = localStorage.getItem('roleToken');
-  return adminToken || roleToken;
-};
-
-// Create axios instance
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
-
-// Add token to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    console.log(`🚀 API Request: ${config.method.toUpperCase()} ${config.url}`, config.data || '');
-    return config;
-  },
-  (error) => {
-    console.error('❌ API Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor for debugging
-api.interceptors.response.use(
-  (response) => {
-    console.log(`✅ API Response: ${response.status} ${response.config.url}`, response.data);
-    return response;
-  },
-  (error) => {
-    console.error('❌ API Response Error:', error.response?.data || error.message);
-    return Promise.reject(error);
-  }
-);
+import API from "./axios";
 
 // ==================== MATERIAL APIs ====================
 
@@ -54,7 +9,7 @@ api.interceptors.response.use(
  */
 export const searchMaterials = async (query) => {
   try {
-    const response = await api.get(`/quotation-materials/search?query=${encodeURIComponent(query)}`);
+    const response = await API.get(`/quotation-materials/search?query=${encodeURIComponent(query)}`);
     return response;
   } catch (error) {
     console.error('Error in searchMaterials:', error);
@@ -68,7 +23,7 @@ export const searchMaterials = async (query) => {
  */
 export const getAllMaterials = async () => {
   try {
-    const response = await api.get('/quotation-materials');
+    const response = await API.get('/quotation-materials');
     return response;
   } catch (error) {
     console.error('Error in getAllMaterials:', error);
@@ -83,7 +38,7 @@ export const getAllMaterials = async () => {
  */
 export const createQuotationMaterial = async (materialData) => {
   try {
-    const response = await api.post('/quotation-materials', materialData);
+    const response = await API.post('/quotation-materials', materialData);
     return response;
   } catch (error) {
     console.error('Error in createQuotationMaterial:', error);
@@ -98,7 +53,7 @@ export const createQuotationMaterial = async (materialData) => {
  */
 export const getQuotationMaterialById = async (id) => {
   try {
-    const response = await api.get(`/quotation-materials/${id}`);
+    const response = await API.get(`/quotation-materials/${id}`);
     return response;
   } catch (error) {
     console.error('Error in getQuotationMaterialById:', error);
@@ -114,7 +69,7 @@ export const getQuotationMaterialById = async (id) => {
  */
 export const updateQuotationMaterial = async (id, materialData) => {
   try {
-    const response = await api.put(`/quotation-materials/${id}`, materialData);
+    const response = await API.put(`/quotation-materials/${id}`, materialData);
     return response;
   } catch (error) {
     console.error('Error in updateQuotationMaterial:', error);
@@ -129,7 +84,7 @@ export const updateQuotationMaterial = async (id, materialData) => {
  */
 export const deleteQuotationMaterial = async (id) => {
   try {
-    const response = await api.delete(`/quotation-materials/${id}`);
+    const response = await API.delete(`/quotation-materials/${id}`);
     return response;
   } catch (error) {
     console.error('Error in deleteQuotationMaterial:', error);
@@ -143,7 +98,7 @@ export const deleteQuotationMaterial = async (id) => {
  */
 export const getPopularMaterials = async () => {
   try {
-    const response = await api.get('/quotation-materials/popular');
+    const response = await API.get('/quotation-materials/popular');
     return response;
   } catch (error) {
     console.error('Error in getPopularMaterials:', error);
@@ -160,7 +115,7 @@ export const getPopularMaterials = async () => {
  */
 export const createQuotation = async (formData) => {
   try {
-    const response = await api.post('/quotations', formData, {
+    const response = await API.post('/quotations', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -178,7 +133,7 @@ export const createQuotation = async (formData) => {
  */
 export const getAllQuotations = async () => {
   try {
-    const response = await api.get('/quotations');
+    const response = await API.get('/quotations');
     return response;
   } catch (error) {
     console.error('Error in getAllQuotations:', error);
@@ -193,7 +148,7 @@ export const getAllQuotations = async () => {
  */
 export const getQuotationById = async (id) => {
   try {
-    const response = await api.get(`/quotations/${id}`);
+    const response = await API.get(`/quotations/${id}`);
     return response;
   } catch (error) {
     console.error('Error in getQuotationById:', error);
@@ -209,7 +164,7 @@ export const getQuotationById = async (id) => {
  */
 export const updateQuotation = async (id, formData) => {
   try {
-    const response = await api.put(`/quotations/${id}`, formData, {
+    const response = await API.put(`/quotations/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -228,7 +183,7 @@ export const updateQuotation = async (id, formData) => {
  */
 export const deleteQuotation = async (id) => {
   try {
-    const response = await api.delete(`/quotations/${id}`);
+    const response = await API.delete(`/quotations/${id}`);
     return response;
   } catch (error) {
     console.error('Error in deleteQuotation:', error);
@@ -244,7 +199,7 @@ export const deleteQuotation = async (id) => {
  */
 export const updateQuotationStatus = async (id, status) => {
   try {
-    const response = await api.patch(`/quotations/${id}/status`, { status });
+    const response = await API.patch(`/quotations/${id}/status`, { status });
     return response;
   } catch (error) {
     console.error('Error in updateQuotationStatus:', error);
@@ -259,7 +214,7 @@ export const updateQuotationStatus = async (id, status) => {
  */
 export const getQuotationsByCustomer = async (customerId) => {
   try {
-    const response = await api.get(`/quotations/customer/${customerId}`);
+    const response = await API.get(`/quotations/customer/${customerId}`);
     return response;
   } catch (error) {
     console.error('Error in getQuotationsByCustomer:', error);
@@ -735,6 +690,49 @@ export const printQuotationWithoutCostsById = async (id) => {
     console.error('Error printing quotation without costs by ID:', error);
     throw error;
   }
+};
+// Update the getImageUrl function to properly handle URLs
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  
+  // Agar pehle se full URL hai
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Get base URL from API instance or environment
+  const baseUrl = API.defaults.baseURL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  
+  // Clean the URL - remove /api from base if it exists
+  const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
+  
+  // Clean the image URL
+  let cleanUrl = imageUrl;
+  
+  // Remove any /api prefix from the image URL
+  if (cleanUrl.startsWith('/api/')) {
+    cleanUrl = cleanUrl.substring(4);
+  }
+  
+  // Ensure the URL starts with /uploads
+  if (!cleanUrl.startsWith('/uploads')) {
+    if (cleanUrl.includes('uploads')) {
+      // If it contains uploads but doesn't start with it, extract the path
+      const uploadsIndex = cleanUrl.indexOf('/uploads');
+      if (uploadsIndex !== -1) {
+        cleanUrl = cleanUrl.substring(uploadsIndex);
+      } else {
+        cleanUrl = `/uploads/${cleanUrl.replace(/^\/+/, '')}`;
+      }
+    } else {
+      cleanUrl = `/uploads/${cleanUrl.replace(/^\/+/, '')}`;
+    }
+  }
+  
+  const fullUrl = `${cleanBaseUrl}${cleanUrl}`;
+  console.log('🖼️ Generated image URL:', fullUrl);
+  
+  return fullUrl;
 };
 
 // ==================== EXPORT ALL FUNCTIONS ====================

@@ -63,13 +63,6 @@ const AddQuotationCustomer = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
 
-  // ========== ESTIMATE STATE ==========
-  const [estimate, setEstimate] = useState({
-    low: "",
-    medium: "",
-    high: ""
-  });
-
   // ========== EDIT MODE STATE ==========
   const [editingItemId, setEditingItemId] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -517,8 +510,7 @@ const AddQuotationCustomer = () => {
       const quotationData = {
         customer: customerId,
         items: processedItems,
-        validUntil: validUntil,
-        estimate: estimate // Add estimate data
+        validUntil: validUntil
       };
 
       console.log("📤 Sending quotation data:", JSON.stringify(quotationData, null, 2));
@@ -528,7 +520,6 @@ const AddQuotationCustomer = () => {
       formData.append('customer', quotationData.customer);
       formData.append('items', JSON.stringify(quotationData.items));
       formData.append('validUntil', quotationData.validUntil);
-      formData.append('estimate', JSON.stringify(estimate));
       
       // Append images
       images.forEach((image, index) => {
@@ -554,7 +545,6 @@ const AddQuotationCustomer = () => {
           phone: "",
           address: ""
         });
-        setEstimate({ low: "", medium: "", high: "" });
         
         setTimeout(() => {
           navigate("/all-Quotation");
@@ -582,7 +572,7 @@ const AddQuotationCustomer = () => {
   };
 
   return (
-    <div className="add-quotation-page" onKeyDown={handleKeyPress}>
+    <div className="add-quotation-page   sideber-container-Mobile" onKeyDown={handleKeyPress}>
       <Sidebar />
       
       <div className="add-quotation-content">
@@ -962,59 +952,6 @@ const AddQuotationCustomer = () => {
                   </div>
                 )}
               </>
-            ) : (
-              <div className="add-quotation-section-placeholder">
-                <p>Please save customer information first</p>
-              </div>
-            )}
-          </div>
-
-          {/* Estimate Section - NEW */}
-          <div className={`add-quotation-section ${!customerSaved ? 'add-quotation-section-disabled' : ''}`}>
-            <h2 className="add-quotation-section-title">
-              <FiTrendingUp className="add-quotation-section-icon" />
-              Project Estimate
-            </h2>
-            
-            {customerSaved ? (
-              <div className="add-quotation-estimate-grid">
-                <div className="add-quotation-estimate-group">
-                  <label className="add-quotation-label">Low Estimate (Rs)</label>
-                  <input
-                    type="number"
-                    className="add-quotation-input"
-                    placeholder="Enter low estimate"
-                    value={estimate.low}
-                    onChange={(e) => setEstimate({...estimate, low: e.target.value})}
-                    min="0"
-                    step="1000"
-                  />
-                </div>
-                <div className="add-quotation-estimate-group">
-                  <label className="add-quotation-label">Medium Estimate (Rs)</label>
-                  <input
-                    type="number"
-                    className="add-quotation-input"
-                    placeholder="Enter medium estimate"
-                    value={estimate.medium}
-                    onChange={(e) => setEstimate({...estimate, medium: e.target.value})}
-                    min="0"
-                    step="1000"
-                  />
-                </div>
-                <div className="add-quotation-estimate-group">
-                  <label className="add-quotation-label">High Estimate (Rs)</label>
-                  <input
-                    type="number"
-                    className="add-quotation-input"
-                    placeholder="Enter high estimate"
-                    value={estimate.high}
-                    onChange={(e) => setEstimate({...estimate, high: e.target.value})}
-                    min="0"
-                    step="1000"
-                  />
-                </div>
-              </div>
             ) : (
               <div className="add-quotation-section-placeholder">
                 <p>Please save customer information first</p>

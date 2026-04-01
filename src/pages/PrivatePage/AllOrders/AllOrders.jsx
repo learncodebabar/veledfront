@@ -2,19 +2,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  FiPackage, FiSearch, FiFilter, FiCalendar,
+  FiPackage, FiSearch, FiCalendar,
   FiChevronRight, FiRefreshCw, FiX, FiDollarSign,
-  FiUser, FiPhone, FiMapPin, FiClock, FiAlertCircle,
+  FiPhone, FiClock, FiAlertCircle,
   FiCheckCircle
 } from 'react-icons/fi';
+
 import {
-  BsCurrencyRupee, BsWallet2, BsBoxSeam,
-  BsThreeDotsVertical
+  BsCurrencyRupee, BsWallet2
 } from 'react-icons/bs';
+
 import {
   MdPendingActions, MdOutlineLocalShipping,
-  MdCheckCircle, MdOutlineRefresh
+  MdCheckCircle
 } from 'react-icons/md';
+
 import Sidebar from '../../../components/Sidebar/Sidebar';
 import { getAllOrders } from '../../../api/orderApi';
 import './AllOrders.css';
@@ -22,22 +24,24 @@ import './AllOrders.css';
 const AllOrders = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get filter from navigation state (from dashboard)
+
   const orderFilter = location.state?.orderFilter;
   const filterValue = location.state?.filterValue;
   const fromDashboard = location.state?.fromDashboard;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState(filterValue || 'all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Status options
+  // Order status — backend enum: pending | in-progress | completed
   const statusOptions = [
     { value: 'all', label: 'All Orders', color: 'var(--text-muted)' },
     { value: 'pending', label: 'Pending', icon: <MdPendingActions />, color: 'var(--warning-color)' },
@@ -45,15 +49,15 @@ const AllOrders = () => {
     { value: 'completed', label: 'Completed', icon: <MdCheckCircle />, color: 'var(--success-color)' }
   ];
 
-  // Payment status filter options
+  // Payment filter options — backend paymentStatus enum: pending | partial | paid
   const paymentFilterOptions = [
     { value: 'all', label: 'All Payments' },
-    { value: 'pending_payment', label: 'Pending Payment', icon: <FiAlertCircle />, color: '#f59e0b' },
-    { value: 'partial_payment', label: 'Partial Payment', icon: <FiClock />, color: '#3b82f6' },
-    { value: 'complete_payment', label: 'Complete Payment', icon: <FiCheckCircle />, color: '#10b981' }
+    { value: 'pending', label: 'Pending Payment' },
+    { value: 'partial', label: 'Partial Payment' },
+    { value: 'paid', label: 'Complete Payment' },
+    { value: 'completed_payment_pending', label: 'Completed Order Payment Pending' }
   ];
 
-  // Sort options
   const sortOptions = [
     { value: 'newest', label: 'Newest First' },
     { value: 'oldest', label: 'Oldest First' },
@@ -65,15 +69,37 @@ const AllOrders = () => {
     fetchOrders();
   }, []);
 
+  // Dashboard سے آنے والا filter apply کریں
+  useEffect(() => {
+    if (fromDashboard && filterValue) {
+      if (orderFilter === "payment") {
+        // Dashboard filterValue کو backend paymentStatus enum سے map کریں
+        const paymentMap = {
+          pending_payment: 'pending',
+          partial_payment: 'partial',
+          complete_payment: 'paid',
+          completed_payment_pending: 'completed_payment_pending'
+        };
+        setPaymentFilter(paymentMap[filterValue] || 'all');
+        setStatusFilter("all");
+      }
+
+      if (orderFilter === "status") {
+        setStatusFilter(filterValue);
+        setPaymentFilter("all");
+      }
+    }
+  }, [fromDashboard, filterValue, orderFilter]);
+
   useEffect(() => {
     filterAndSortOrders();
-  }, [orders, searchTerm, statusFilter, sortBy, filterValue]);
+  }, [orders, searchTerm, statusFilter, paymentFilter, sortBy]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const response = await getAllOrders();
-      
+
       let ordersData = [];
       if (response.data?.data) {
         ordersData = response.data.data;
@@ -82,7 +108,7 @@ const AllOrders = () => {
       } else if (Array.isArray(response)) {
         ordersData = response;
       }
-      
+
       setOrders(ordersData);
       setFilteredOrders(ordersData);
       setError(null);
@@ -98,52 +124,35 @@ const AllOrders = () => {
   const filterAndSortOrders = () => {
     let filtered = [...orders];
 
-    // Apply search filter
+    // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(order => 
+      filtered = filtered.filter(order =>
         order.billNumber?.toLowerCase().includes(term) ||
         order.customer?.name?.toLowerCase().includes(term) ||
         order.customer?.phone?.includes(term)
       );
     }
 
-    // Apply payment status filter (from dashboard)
-    if (filterValue && filterValue !== 'all') {
-      filtered = filtered.filter(order => {
-        const advance = order.advancePayment || 0;
-        const finalTotal = order.finalTotal || 0;
-        const isPaid = advance >= finalTotal;
-        const isPartial = advance > 0 && advance < finalTotal;
-        const isPending = advance === 0;
-        
-        switch(filterValue) {
-          case 'pending_payment':
-            return isPending;
-          case 'partial_payment':
-            return isPartial;
-          case 'complete_payment':
-            return isPaid;
-          case 'delayed':
-            return order.dueDate && new Date(order.dueDate) < new Date() && order.status !== 'completed';
-          case 'active':
-            return order.status === 'in-progress';
-          case 'price':
-            return order.status === 'pending';
-          case 'complete':
-            return order.status === 'completed';
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply regular status filter
-    if (statusFilter !== 'all' && !filterValue) {
+    // Order status filter — backend enum: pending | in-progress | completed
+    if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
 
-    // Apply sorting
+    // Payment filter — backend paymentStatus enum: pending | partial | paid
+    if (paymentFilter !== 'all') {
+      if (paymentFilter === 'completed_payment_pending') {
+        // completed order لیکن payment ابھی paid نہیں
+        filtered = filtered.filter(order =>
+          order.status === 'completed' && order.paymentStatus !== 'paid'
+        );
+      } else {
+        // directly backend paymentStatus field سے match کریں
+        filtered = filtered.filter(order => order.paymentStatus === paymentFilter);
+      }
+    }
+
+    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -171,17 +180,24 @@ const AllOrders = () => {
     setSearchTerm('');
   };
 
-  const clearFilter = () => {
+  const clearFilters = () => {
     setStatusFilter('all');
-    // Clear the filter value from dashboard
+    setPaymentFilter('all');
+    setSearchTerm('');
     window.history.replaceState({}, document.title);
   };
 
   const getStatusBadge = (status) => {
     const option = statusOptions.find(opt => opt.value === status) || statusOptions[0];
     return (
-      <span className="allorder-status-badge" style={{ 
-        backgroundColor: `var(--${status === 'pending' ? 'warning-color' : status === 'in-progress' ? 'info-color' : status === 'completed' ? 'success-color' : 'text-muted'})20`,
+      <span className="allorder-status-badge" style={{
+        backgroundColor: `var(--${status === 'pending'
+          ? 'warning-color'
+          : status === 'in-progress'
+            ? 'info-color'
+            : status === 'completed'
+              ? 'success-color'
+              : 'text-muted'})20`,
         color: option.color,
         borderColor: option.color + '40'
       }}>
@@ -191,13 +207,13 @@ const AllOrders = () => {
     );
   };
 
+  // ✅ backend paymentStatus field استعمال کریں: pending | partial | paid
   const getPaymentStatusBadge = (order) => {
-    const advance = order.advancePayment || 0;
-    const finalTotal = order.finalTotal || 0;
-    
-    if (advance >= finalTotal) {
-      return { status: 'complete', label: 'Complete', icon: <FiCheckCircle />, color: '#10b981' };
-    } else if (advance > 0) {
+    const paymentStatus = order.paymentStatus || 'pending';
+
+    if (paymentStatus === 'paid') {
+      return { status: 'paid', label: 'Paid', icon: <FiCheckCircle />, color: '#10b981' };
+    } else if (paymentStatus === 'partial') {
       return { status: 'partial', label: 'Partial', icon: <FiClock />, color: '#3b82f6' };
     } else {
       return { status: 'pending', label: 'Pending', icon: <FiAlertCircle />, color: '#f59e0b' };
@@ -221,19 +237,6 @@ const AllOrders = () => {
       return 'N/A';
     }
   };
-
-  // Get active filter display
-  const getActiveFilterDisplay = () => {
-    if (filterValue && filterValue !== 'all') {
-      const filter = paymentFilterOptions.find(f => f.value === filterValue);
-      if (filter) {
-        return { label: filter.label, icon: filter.icon, color: filter.color };
-      }
-    }
-    return null;
-  };
-
-  const activeFilter = getActiveFilterDisplay();
 
   if (loading) {
     return (
@@ -266,29 +269,17 @@ const AllOrders = () => {
   return (
     <div className="allorder-container sideber-container-Mobile">
       <Sidebar />
-      
+
       <div className="allorder-content">
-        {/* Header */}
         <div className="allorder-header">
           <div className="allorder-header-title">
             <h1>All Orders</h1>
             <p>Manage and view all your orders</p>
-            {activeFilter && fromDashboard && (
-              <div className="allorder-active-filter">
-                <span className="active-filter-badge" style={{ backgroundColor: activeFilter.color + '20', color: activeFilter.color }}>
-                  {activeFilter.icon}
-                  {activeFilter.label}
-                </span>
-                <button onClick={clearFilter} className="clear-filter-btn">
-                  <FiX /> Clear Filter
-                </button>
-              </div>
-            )}
           </div>
-          
+
           <div className="allorder-header-actions">
-            <button 
-              className="allorder-refresh-btn" 
+            <button
+              className="allorder-refresh-btn"
               onClick={handleRefresh}
               disabled={refreshing}
             >
@@ -298,7 +289,6 @@ const AllOrders = () => {
           </div>
         </div>
 
-        {/* Search and Filter Bar */}
         <div className="allorder-search-filter-bar">
           <div className="allorder-search-wrapper">
             <FiSearch className="allorder-search-icon" />
@@ -317,11 +307,10 @@ const AllOrders = () => {
           </div>
 
           <div className="allorder-filter-wrapper">
-            <select 
-              value={statusFilter} 
+            <select
+              value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="allorder-filter-select"
-              disabled={!!filterValue}
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -330,8 +319,20 @@ const AllOrders = () => {
               ))}
             </select>
 
-            <select 
-              value={sortBy} 
+            <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value)}
+              className="allorder-filter-select"
+            >
+              {paymentFilterOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="allorder-filter-select"
             >
@@ -341,40 +342,34 @@ const AllOrders = () => {
                 </option>
               ))}
             </select>
+
+            <button onClick={clearFilters} className="clear-filter-btn">
+              <FiX /> Clear Filters
+            </button>
           </div>
         </div>
 
-        {/* Results Info */}
         <div className="allorder-results-info">
           <span>Showing {filteredOrders.length} of {orders.length} orders</span>
-          {activeFilter && fromDashboard && (
-            <span className="filtered-badge">Filtered by: {activeFilter.label}</span>
-          )}
         </div>
 
-        {/* Orders Grid */}
         {filteredOrders.length === 0 ? (
           <div className="allorder-no-orders">
             <FiPackage className="allorder-no-data-icon" />
             <h3>No orders found</h3>
-            <p>Try adjusting your search or filter to find what you're looking for.</p>
-            {activeFilter && (
-              <button onClick={clearFilter} className="allorder-clear-filter-btn">
-                Clear Filter
-              </button>
-            )}
+            <p>Try adjusting your search or filter.</p>
           </div>
         ) : (
           <div className="allorder-orders-grid">
             {filteredOrders.map((order) => {
               const paymentStatus = getPaymentStatusBadge(order);
+
               return (
-                <div 
-                  key={order._id} 
+                <div
+                  key={order._id}
                   className="allorder-order-card"
                   onClick={() => navigate(`/customer-orders/${order._id}`)}
                 >
-                  {/* Card Header */}
                   <div className="allorder-order-card-header">
                     <div className="allorder-order-title">
                       <h3 className="allorder-order-id">{order.billNumber || order._id?.slice(-8)}</h3>
@@ -386,7 +381,6 @@ const AllOrders = () => {
                     {getStatusBadge(order.status)}
                   </div>
 
-                  {/* Customer Info */}
                   <div className="allorder-order-customer-info">
                     <div className="allorder-customer-avatar">
                       {order.customer?.name?.charAt(0).toUpperCase() || '?'}
@@ -400,7 +394,6 @@ const AllOrders = () => {
                     </div>
                   </div>
 
-                  {/* Order Details */}
                   <div className="allorder-order-details">
                     <div className="allorder-detail-item">
                       <FiDollarSign className="allorder-detail-icon" />
@@ -422,17 +415,24 @@ const AllOrders = () => {
                       <BsCurrencyRupee className="allorder-detail-icon" />
                       <div>
                         <span className="allorder-detail-label">Remaining</span>
-                        <span className="allorder-detail-value">{formatCurrency(order.remainingBalance || order.finalTotal)}</span>
+                        {/* ✅ backend کا remainingBalance field استعمال کریں */}
+                        <span className="allorder-detail-value">{formatCurrency(order.remainingBalance ?? order.finalTotal)}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Payment Status */}
                   <div className="allorder-order-footer">
-                    <div className="allorder-payment-status">
-                      <span className={`allorder-status-dot allorder-status-dot-${paymentStatus.status}`}></span>
+                    <div className="allorder-payment-status" style={{ color: paymentStatus.color }}>
+                      <span
+                        className={`allorder-status-dot allorder-status-dot-${paymentStatus.status}`}
+                        style={{ backgroundColor: paymentStatus.color }}
+                      ></span>
                       <span>Payment: {paymentStatus.label}</span>
+                      {paymentStatus.status === 'paid' && (
+                        <FiCheckCircle style={{ marginLeft: '4px' }} />
+                      )}
                     </div>
+
                     <button className="allorder-view-details-btn">
                       View Details <FiChevronRight />
                     </button>
@@ -442,6 +442,7 @@ const AllOrders = () => {
             })}
           </div>
         )}
+
       </div>
     </div>
   );

@@ -25,9 +25,9 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   
-  // States for OTP
+  // States for OTP - 6 digits
   const [step, setStep] = useState("login"); // 'login' or 'otp'
-  const [otp, setOtp] = useState(["", "", "", "", "", "", "", ""]); // 8-digit OTP
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]); // 6-digit OTP
   const [timer, setTimer] = useState(0);
   const [canResend, setCanResend] = useState(true);
   
@@ -64,22 +64,30 @@ export default function AdminLogin() {
     }, 1000);
   };
 
-  // Login handler
+  // Login handler - Step 1: Send OTP
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      showToastMessage("Please enter email and password", "error");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await API.post("/admin/login", { email, password });
+      const res = await API.post("/admin/login-with-otp", { email, password });
       
       if (res.data.requiresOTP) {
         setStep("otp");
         startResendTimer();
-        showToastMessage("Verification code sent to your email!", "success");
-      } else {
-        localStorage.setItem("adminToken", res.data.token);
-        showToastMessage("Login successful! Redirecting to dashboard...", "success");
-        setTimeout(() => navigate("/Admin-Dashboard-overall"), 1500);
+        showToastMessage("6-digit verification code sent to your email!", "success");
+        
+        // Focus on first OTP input
+        setTimeout(() => {
+          const firstInput = document.getElementById("otp-0");
+          if (firstInput) firstInput.focus();
+        }, 100);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Invalid email or password";
@@ -89,7 +97,7 @@ export default function AdminLogin() {
     }
   };
 
-  // Handle OTP input change
+  // Handle OTP input change for 6 digits
   const handleOtpChange = (index, value) => {
     if (value.length > 1) return; // Only single digit
     
@@ -98,7 +106,7 @@ export default function AdminLogin() {
     setOtp(newOtp);
 
     // Auto-focus next input
-    if (value && index < 7) {
+    if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
@@ -112,10 +120,10 @@ export default function AdminLogin() {
     }
   };
 
-  // Handle OTP paste
+  // Handle OTP paste for 6 digits
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     const newOtp = [...otp];
     
     for (let i = 0; i < pastedData.length; i++) {
@@ -125,38 +133,44 @@ export default function AdminLogin() {
     setOtp(newOtp);
     
     // Focus the next empty input or last input
-    const nextIndex = Math.min(pastedData.length, 7);
+    const nextIndex = Math.min(pastedData.length, 5);
     const nextInput = document.getElementById(`otp-${nextIndex}`);
     if (nextInput) nextInput.focus();
   };
 
-  // Verify OTP handler
+  // Verify OTP handler - Step 2: Verify 6-digit OTP
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     
     const otpString = otp.join("");
-    if (otpString.length !== 8) {
-      showToastMessage("Please enter complete 8-digit code", "error");
+    if (otpString.length !== 6) {
+      showToastMessage("Please enter complete 6-digit code", "error");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await API.post("/admin/verify-otp", { 
+      const res = await API.post("/admin/verify-login-otp", { 
         email, 
         otp: otpString 
       });
       
+      // Store token and user data
       localStorage.setItem("adminToken", res.data.token);
+      localStorage.setItem("adminUser", JSON.stringify(res.data.user));
+      
       showToastMessage("Login successful! Redirecting to dashboard...", "success");
-      setTimeout(() => navigate("/Admin-Dashboard-overall"), 1500);
+      
+      setTimeout(() => {
+        navigate("/Admin-Dashboard-overall");
+      }, 1500);
     } catch (err) {
       const errorMessage = err.response?.data?.message || "Invalid verification code";
       showToastMessage(errorMessage, "error");
       
       // Clear OTP inputs on error
-      setOtp(["", "", "", "", "", "", "", ""]);
+      setOtp(["", "", "", "", "", ""]);
       
       // Focus first input
       const firstInput = document.getElementById("otp-0");
@@ -172,12 +186,12 @@ export default function AdminLogin() {
 
     setLoading(true);
     try {
-      await API.post("/admin/resend-otp", { email });
-      showToastMessage("New verification code sent to your email!", "success");
+      await API.post("/admin/resend-login-otp", { email });
+      showToastMessage("New 6-digit verification code sent to your email!", "success");
       startResendTimer();
       
       // Clear OTP inputs
-      setOtp(["", "", "", "", "", "", "", ""]);
+      setOtp(["", "", "", "", "", ""]);
       
       // Focus first input
       const firstInput = document.getElementById("otp-0");
@@ -192,7 +206,8 @@ export default function AdminLogin() {
   // Go back to login
   const handleBackToLogin = () => {
     setStep("login");
-    setOtp(["", "", "", "", "", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
+    setPassword("");
   };
 
   return (
@@ -232,6 +247,7 @@ export default function AdminLogin() {
               <div className="login-icon-wrapper">
                 <FaUserCircle className="login-main-icon" />
               </div>
+              <h1 className="login-title">Admin Login</h1>
               <p className="login-subtitle">Welcome back! Please login to your account</p>
             </div>
 
@@ -290,7 +306,7 @@ export default function AdminLogin() {
             </form>
           </>
         ) : (
-          /* OTP Verification Form */
+          /* OTP Verification Form - 6 Digits */
           <>
             <div className="login-header">
               <div className="login-icon-wrapper">
@@ -298,7 +314,7 @@ export default function AdminLogin() {
               </div>
               <h1 className="login-title">Verification Code</h1>
               <p className="login-subtitle">
-                Enter the 8-digit code sent to<br />
+                Enter the 6-digit code sent to<br />
                 <strong>{email}</strong>
               </p>
             </div>
@@ -326,7 +342,9 @@ export default function AdminLogin() {
 
               <div className="otp-timer">
                 {!canResend ? (
-                  <span><FaShieldAlt /> Resend code in <strong>{timer}s</strong></span>
+                  <span className="timer-text">
+                    <FaShieldAlt /> Resend code in <strong>{timer}s</strong>
+                  </span>
                 ) : (
                   <button
                     type="button"
@@ -341,7 +359,7 @@ export default function AdminLogin() {
 
               <button
                 type="submit"
-                disabled={loading || otp.join("").length !== 8}
+                disabled={loading || otp.join("").length !== 6}
                 className={`submit-btn ${loading ? 'loading' : ''}`}
               >
                 {loading ? <><FaSpinner className="spinning" /> Verifying...</> : 'Verify & Login'}

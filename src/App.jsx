@@ -9,7 +9,6 @@ import { ThemeProvider } from "./ThemeContext/ThemeContext";
 // ===== ROUTE GUARDS =====
 import AdminPrivateRoute from "./Route/AdminPrivateRoute";
 import RolePrivateRoute from "./Route/RolePrivateRoute";
-import SecureRoute from "./components/SecureRoute";
 
 // ===== PUBLIC PAGES =====
 import AdminSignup from "./pages/adminPublic/signup/AdminSignup";
@@ -17,8 +16,9 @@ import AdminLogin from "./pages/adminPublic/Login/AdminLogin";
 import RoleLogin from "./pages/Role/RoleLogin/RoleLogin";
 import NotFound from "./pages/adminPublic/NotFound/NotFound";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
+import NoPermission from "./pages/Role/NoPermission/NoPermission";
 
-// ===== ADMIN PAGES (Full Access) =====
+// ===== ADMIN PAGES =====
 import Dashboard from "./pages/PrivatePage/Dashboard/Dashboard";
 import AddCustomer from "./pages/PrivatePage/AddCustomer/AddCustomer";
 import Profile from "./pages/PrivatePage/Profile/Profile";
@@ -39,9 +39,11 @@ import Roles from "./pages/PrivatePage/Roles/Roles";
 import QuotationCustomer from "./pages/PrivatePage/QuotationCustomer/AddQuotationCustomer";
 import AdminMaterial from "./pages/PrivatePage/AdminMaterial/AdminMaterial";
 import Quotations from "./pages/PrivatePage/Quotations/Quotations";
-import PrintQuotation from "./pages/PrivatePage/Quotations/PrintQuotation"; // ✅ ADD THIS IMPORT
+import PrintQuotation from "./pages/PrivatePage/Quotations/PrintQuotation";
+import CreateNewOrder from "./pages/PrivatePage/CreateNewOrder/CreateNewOrder";
+import CreateQuotationOrder from "./pages/PrivatePage/CreateQuotationOrder/CreateQuotationOrder";
 
-// ===== ROLE PAGES (Permission Based) =====
+// ===== ROLE PAGES =====
 import Roledashboard from "./pages/Role/Roledashboard/Roledashboard";
 import RoleAddCustomer from "./pages/Role/Addcustomer/Addcustomer";
 
@@ -50,15 +52,65 @@ import API from "./api/axios";
 
 // ===== STYLES =====
 import "./App.css";
-import CreateNewOrder from "./pages/PrivatePage/CreateNewOrder/CreateNewOrder";
-import CreateQuotationOrder from "./pages/PrivatePage/CreateQuotationOrder/CreateQuotationOrder";
-import NoPermission from "./pages/Role/NoPermission/NoPermission";
+import Welcome from "./pages/Role/Welcome/Welcome";
 
+// ==================== DYNAMIC ROUTE GUARD COMPONENT ====================
+const DynamicRouteGuard = ({ children, requiredPermission, allowedRoles = [] }) => {
+  const adminToken = localStorage.getItem('adminToken');
+  const roleToken = localStorage.getItem('roleToken');
+  const roleUser = JSON.parse(localStorage.getItem('roleUser') || '{}');
+  const userPermissions = roleUser.permissionsArray || [];
+  
+  console.log('🔐 DynamicRouteGuard:', {
+    adminToken: !!adminToken,
+    roleToken: !!roleToken,
+    requiredPermission,
+    userPermissions
+  });
+  
+  // ✅ Admin can access everything
+  if (adminToken) {
+    console.log('✅ Admin access granted for dynamic route');
+    return <>{children}</>;
+  }
+  
+  // ✅ Role user check
+  if (roleToken) {
+    // Check permission
+    if (requiredPermission && !userPermissions.includes(requiredPermission)) {
+      console.log(`❌ No permission for ${requiredPermission}`);
+      return <Navigate to="/unauthorized" replace />;
+    }
+    
+    // Check role
+    const userRole = roleUser?.role || 'manager';
+    if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+      console.log(`❌ Role ${userRole} not allowed. Required:`, allowedRoles);
+      return <Navigate to="/unauthorized" replace />;
+    }
+    
+    console.log('✅ Role access granted for dynamic route');
+    return <>{children}</>;
+  }
+  
+  // ❌ No token
+  console.log('❌ No token found for dynamic route');
+  return <Navigate to="/roles-login" replace />;
+};
+
+// ==================== LOADING COMPONENT ====================
+const LoadingSpinner = () => (
+  <div className="app-loading">
+    <div className="loading-spinner"></div>
+    <p>Loading...</p>
+  </div>
+);
+
+// ==================== APP COMPONENT ====================
 function App() {
   const [adminExists, setAdminExists] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if admin exists on app load
   useEffect(() => {
     checkAdminExists();
   }, []);
@@ -85,23 +137,17 @@ function App() {
     }
   };
 
-  // Loading state
   if (loading) {
-    return (
-      <div className="app-loading">
-        <div className="loading-spinner"></div>
-        <p>Checking system status...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
-    <AuthProvider>
-      <PermissionProvider>
-        <ThemeProvider>
-          <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <PermissionProvider>
+          <ThemeProvider>
             <Routes>
-              {/* ===== PUBLIC ROUTES ===== */}
+              {/* ==================== PUBLIC ROUTES ==================== */}
               <Route 
                 path="/Admin-Signup-Page" 
                 element={
@@ -111,9 +157,10 @@ function App() {
               <Route path="/" element={<AdminLogin />} />
               <Route path="/roles-login" element={<RoleLogin />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="/no-permission" element={<NoPermission />} />
               <Route path="/404" element={<NotFound />} />
 
-              {/* ===== ADMIN ROUTES - FULL ACCESS (No permission checks) ===== */}
+              {/* ==================== ADMIN ONLY ROUTES ==================== */}
               
               {/* Dashboard */}
               <Route
@@ -124,7 +171,6 @@ function App() {
                   </AdminPrivateRoute>
                 }
               />
-              <Route path="/no-permission" element={<NoPermission />} />
 
               {/* Quotation Routes */}
               <Route
@@ -145,7 +191,7 @@ function App() {
                 }
               />
 
-              {/* ✅ ADD PRINT QUOTATION ROUTE - MUST BE BEFORE /:id ROUTE */}
+              {/* ✅ ADMIN PRINT QUOTATION ROUTES */}
               <Route
                 path="/quotations/print/:id"
                 element={
@@ -155,7 +201,7 @@ function App() {
                 }
               />
 
-              {/* ✅ Optional: Add route for viewing quotation details */}
+              {/* Optional: View and Edit Quotation Routes */}
               <Route
                 path="/quotations/:id"
                 element={
@@ -165,7 +211,6 @@ function App() {
                 }
               />
 
-              {/* ✅ Optional: Add route for editing quotation */}
               <Route
                 path="/quotations/edit/:id"
                 element={
@@ -195,7 +240,7 @@ function App() {
                 }
               />
 
-              {/* Customer Routes */}
+              {/* Customer Routes - Admin */}
               <Route
                 path="/Admin-Add-customer"
                 element={
@@ -215,15 +260,6 @@ function App() {
               />
 
               <Route
-                path="/edit-customer/:id"
-                element={
-                  <AdminPrivateRoute>
-                    <AddCustomer />
-                  </AdminPrivateRoute>
-                }
-              />
-
-              <Route
                 path="/admin-all-customer"
                 element={
                   <AdminPrivateRoute>
@@ -232,43 +268,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/quotation-to-order"
-                element={
-                  <AdminPrivateRoute>
-                    <CreateQuotationOrder />
-                  </AdminPrivateRoute>
-                }
-              />
-              
-              <Route
-                path="/Customer-Detail/:id"
-                element={
-                  <AdminPrivateRoute>
-                    <CustomerDetail />
-                  </AdminPrivateRoute>
-                }
-              />
-
-              <Route
-                path="/customer-orders/:id"
-                element={
-                  <AdminPrivateRoute>
-                    <CustomerOrders />
-                  </AdminPrivateRoute>
-                }
-              />
-              
-              <Route
-                path="/Create-New-Order/:customerId"
-                element={
-                  <AdminPrivateRoute>
-                    <CreateNewOrder />
-                  </AdminPrivateRoute>
-                }
-              />
-
-              {/* Order Routes */}
+              {/* Order Routes - Admin */}
               <Route
                 path="/All-Orders"
                 element={
@@ -278,7 +278,7 @@ function App() {
                 }
               />
 
-              {/* Labor Routes */}
+              {/* Labor Routes - Admin */}
               <Route
                 path="/Add-Labor"
                 element={
@@ -297,25 +297,7 @@ function App() {
                 }
               />
 
-              <Route
-                path="/edit-labor/:id"
-                element={
-                  <AdminPrivateRoute>
-                    <EditLabor />
-                  </AdminPrivateRoute>
-                }
-              />
-
-              <Route
-                path="/Worker-Details-Page/:id"
-                element={
-                  <AdminPrivateRoute>
-                    <WorkerDetailsPage />
-                  </AdminPrivateRoute>
-                }
-              />
-
-              {/* Attendance Routes */}
+              {/* Attendance Routes - Admin */}
               <Route
                 path="/Attendance-Page"
                 element={
@@ -325,7 +307,7 @@ function App() {
                 }
               />
 
-              {/* Profile & Settings Routes */}
+              {/* Profile & Settings Routes - Admin */}
               <Route
                 path="/Admin-Profile-custoize"
                 element={
@@ -362,7 +344,7 @@ function App() {
                 }
               />
 
-              {/* Payment & Expense Routes */}
+              {/* Payment & Expense Routes - Admin */}
               <Route
                 path="/Admin-Payment"
                 element={
@@ -399,7 +381,7 @@ function App() {
                 }
               />
 
-              {/* Theme Routes */}
+              {/* Theme Routes - Admin */}
               <Route
                 path="/Theme-Settings"
                 element={
@@ -418,17 +400,91 @@ function App() {
                 }
               />
 
-              {/* ===== ROLE ROUTES - WITH PERMISSION CHECKS ===== */}
-              {/* Sirf wohi pages jo Role ko access diye gaye hain */}
+              {/* ==================== DYNAMIC ROUTES (Both Admin & Role) ==================== */}
+              
+              {/* Customer Dynamic Routes */}
+              <Route
+                path="/Customer-Detail/:id"
+                element={
+                  <DynamicRouteGuard requiredPermission="customer-detail" allowedRoles={['admin', 'manager', 'supervisor']}>
+                    <CustomerDetail />
+                  </DynamicRouteGuard>
+                }
+              />
+              
+              <Route
+                path="/welcome"
+                element={
+                  <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user', 'data_entry']}>
+                    <Welcome />
+                  </RolePrivateRoute>
+                }
+              />
+
+              <Route
+                path="/customer-orders/:id"
+                element={
+                  <DynamicRouteGuard requiredPermission="customer-orders" allowedRoles={['admin', 'manager', 'supervisor']}>
+                    <CustomerOrders />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              <Route
+                path="/edit-customer/:id"
+                element={
+                  <DynamicRouteGuard requiredPermission="edit-customer" allowedRoles={['admin', 'manager']}>
+                    <AddCustomer />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              {/* Order Dynamic Routes */}
+              <Route
+                path="/quotation-to-order"
+                element={
+                  <DynamicRouteGuard requiredPermission="quotation-customer" allowedRoles={['admin', 'manager', 'supervisor']}>
+                    <CreateQuotationOrder />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              <Route
+                path="/Create-New-Order/:customerId"
+                element={
+                  <DynamicRouteGuard requiredPermission="create-new-order" allowedRoles={['admin', 'manager', 'supervisor']}>
+                    <CreateNewOrder />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              {/* Labor Dynamic Routes */}
+              <Route
+                path="/edit-labor/:id"
+                element={
+                  <DynamicRouteGuard requiredPermission="edit-labor" allowedRoles={['admin', 'manager']}>
+                    <EditLabor />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              <Route
+                path="/Worker-Details-Page/:id"
+                element={
+                  <DynamicRouteGuard requiredPermission="worker-details" allowedRoles={['admin', 'manager', 'supervisor']}>
+                    <WorkerDetailsPage />
+                  </DynamicRouteGuard>
+                }
+              />
+
+              {/* ==================== ROLE ONLY ROUTES ==================== */}
 
               {/* Role Dashboard */}
               <Route
                 path="/Role-dashboard"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user', 'data_entry']}>
-                    <SecureRoute requiredPageId="role-dashboard">
-                      <Roledashboard />
-                    </SecureRoute>
+                    <Roledashboard />
                   </RolePrivateRoute>
                 }
               />
@@ -438,9 +494,7 @@ function App() {
                 path="/Role-Add-Customer"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'data_entry']}>
-                    <SecureRoute requiredPageId="role-add-customer">
-                      <RoleAddCustomer />
-                    </SecureRoute>
+                    <RoleAddCustomer />
                   </RolePrivateRoute>
                 }
               />
@@ -449,9 +503,7 @@ function App() {
                 path="/Role-Add-Customer/:id"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'data_entry']}>
-                    <SecureRoute requiredPageId="role-add-customer">
-                      <RoleAddCustomer />
-                    </SecureRoute>
+                    <RoleAddCustomer />
                   </RolePrivateRoute>
                 }
               />
@@ -460,9 +512,7 @@ function App() {
                 path="/role-customers"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user', 'data_entry']}>
-                    <SecureRoute requiredPageId="role-customers">
-                      <AllCustomer />
-                    </SecureRoute>
+                    <AllCustomer />
                   </RolePrivateRoute>
                 }
               />
@@ -472,9 +522,7 @@ function App() {
                 path="/role-orders"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user']}>
-                    <SecureRoute requiredPageId="role-orders">
-                      <AllOrders />
-                    </SecureRoute>
+                    <AllOrders />
                   </RolePrivateRoute>
                 }
               />
@@ -484,9 +532,7 @@ function App() {
                 path="/role-labor"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user']}>
-                    <SecureRoute requiredPageId="role-labor">
-                      <AllLabor />
-                    </SecureRoute>
+                    <AllLabor />
                   </RolePrivateRoute>
                 }
               />
@@ -495,9 +541,7 @@ function App() {
                 path="/role-add-labor"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager']}>
-                    <SecureRoute requiredPageId="role-add-labor">
-                      <AddLabor />
-                    </SecureRoute>
+                    <AddLabor />
                   </RolePrivateRoute>
                 }
               />
@@ -507,9 +551,7 @@ function App() {
                 path="/role-attendance"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor', 'user']}>
-                    <SecureRoute requiredPageId="role-attendance">
-                      <AttendancePage />
-                    </SecureRoute>
+                    <AttendancePage />
                   </RolePrivateRoute>
                 }
               />
@@ -519,14 +561,12 @@ function App() {
                 path="/role-quotations"
                 element={
                   <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor']}>
-                    <SecureRoute requiredPageId="all-quotations">
-                      <Quotations />
-                    </SecureRoute>
+                    <Quotations />
                   </RolePrivateRoute>
                 }
               />
 
-              {/* ✅ ADD ROLE PRINT QUOTATION ROUTE */}
+              {/* ✅ ROLE PRINT QUOTATION ROUTE */}
               <Route
                 path="/role-quotations/print/:id"
                 element={
@@ -536,13 +576,13 @@ function App() {
                 }
               />
 
-              {/* ===== CATCH ALL ROUTE ===== */}
+              {/* ==================== CATCH ALL ROUTE ==================== */}
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Routes>
-          </BrowserRouter>
-        </ThemeProvider>
-      </PermissionProvider>
-    </AuthProvider>
+          </ThemeProvider>
+        </PermissionProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

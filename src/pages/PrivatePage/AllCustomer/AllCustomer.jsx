@@ -309,7 +309,7 @@ const AllCustomer = () => {
   }
 
   return (
-    <div className="main-container-customer-page">
+    <div className="main-container-customer-page sideber-container-Mobile">
       <Sidebar />
       
       <div className="content-wrapper-customer-page">
@@ -323,10 +323,7 @@ const AllCustomer = () => {
           </div>
         )}
 
-        {/* User Type Badge */}
-        <div className={`user-type-badge ${userType}`}>
-          {userType === "admin" ? "👑 Admin Mode" : `👤 ${userRole} Mode`}
-        </div>
+     
 
         {/* Header */}
         <div className="page-header-customer-page">

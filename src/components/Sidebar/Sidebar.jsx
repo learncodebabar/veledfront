@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../../api/axios';
 import './Sidebar.css';
 
+
+
 import { 
   FiHome, FiBarChart2, FiUsers, FiFolder, FiCalendar, 
   FiMessageSquare, FiSettings, FiLogOut,
@@ -11,7 +13,8 @@ import {
   FiClock, FiStar, FiBell, FiShield, FiDatabase, FiServer,
   FiDollarSign, FiShoppingCart, FiUserPlus, FiUserCheck,
   FiUserX, FiUserMinus, FiCreditCard, FiBriefcase,
-  FiMenu, FiX, FiTool, FiAward, FiEye, FiPackage, FiFilePlus
+  FiMenu, FiX, FiTool, FiAward, FiEye, FiPackage, FiFilePlus,
+  FiAlertCircle  // ← Added FiAlertCircle
 } from 'react-icons/fi';
 
 import { FaUserCircle, FaWrench, FaMoneyBillWave, FaUserTag, FaFileInvoice } from 'react-icons/fa';
@@ -20,20 +23,18 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // ✅ Get user info from localStorage
   const adminToken = localStorage.getItem('adminToken');
   const roleToken = localStorage.getItem('roleToken');
   const adminUser = JSON.parse(localStorage.getItem('user') || 'null');
   const roleUser = JSON.parse(localStorage.getItem('roleUser') || 'null');
   
-  // ✅ Determine user type
   const userType = adminToken ? 'admin' : (roleToken ? 'role' : null);
   const user = adminUser || roleUser;
   const userRole = user?.role || 'admin';
   
-  // ✅ State for permissions
   const [userPermissions, setUserPermissions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [menuItems, setMenuItems] = useState([]);
   
   const [userData, setUserData] = useState({
     name: user?.name || (userType === 'admin' ? 'Admin' : 'Role User'),
@@ -46,22 +47,27 @@ const Sidebar = () => {
   const [activeSubItem, setActiveSubItem] = useState(null);
   const [expandedMenus, setExpandedMenus] = useState(['dashboard']);
 
-  // Fetch user data on component mount
   useEffect(() => {
     fetchUserData();
     if (userType === 'role') {
-      fetchUserPermissions();
+      loadUserPermissions();
     }
   }, []);
 
-  // Set active menu based on current path
   useEffect(() => {
+    // Update menu items when permissions change
+    if (userType === 'role') {
+      const filteredMenu = getFilteredRoleMenuItems();
+      setMenuItems(filteredMenu);
+    } else {
+      setMenuItems(adminMenuItems);
+    }
+  }, [userPermissions]);
+
+  useEffect(() => {
+    // Set active menu based on current path
     const path = location.pathname;
-    
-    // Get filtered menu items based on user type
-    const currentMenuItems = userType === 'admin' 
-      ? adminMenuItems 
-      : getFilteredRoleMenuItems();
+    const currentMenuItems = userType === 'admin' ? adminMenuItems : menuItems;
     
     for (const item of currentMenuItems) {
       if (item.path === path) {
@@ -73,15 +79,14 @@ const Sidebar = () => {
           if (subItem.path === path) {
             setActiveItem(item.id);
             setActiveSubItem(subItem.id);
-            setExpandedMenus(prev => [...prev, item.id]);
+            setExpandedMenus(prev => [...new Set([...prev, item.id])]);
             break;
           }
         }
       }
     }
-  }, [location.pathname, userPermissions]);
+  }, [location.pathname, menuItems]);
 
-  // Fetch user data from API
   const fetchUserData = async () => {
     try {
       if (userType === 'admin') {
@@ -99,7 +104,6 @@ const Sidebar = () => {
           role: 'admin'
         });
       } else if (userType === 'role') {
-        const token = localStorage.getItem('roleToken');
         const user = JSON.parse(localStorage.getItem('roleUser') || '{}');
         
         setUserData({
@@ -107,95 +111,104 @@ const Sidebar = () => {
           email: user.email || 'user@example.com',
           role: user.role || 'manager'
         });
+        
+        // Load permissions from stored user
+        if (user.permissionsArray) {
+          setUserPermissions(user.permissionsArray);
+          console.log('✅ Permissions loaded from storage:', user.permissionsArray);
+        }
       }
     } catch (err) {
       console.error('Error fetching user data:', err);
     }
   };
 
-  // ✅ Fetch user permissions for role
-  const fetchUserPermissions = async () => {
+  const loadUserPermissions = async () => {
     try {
       setLoading(true);
-      const roleId = user?.id || roleUser?.id;
-      if (!roleId) return;
       
-      const response = await API.get(`/permissions/role/${roleId}`);
+      // First try to get permissions from stored user
+      const storedUser = JSON.parse(localStorage.getItem('roleUser') || '{}');
+      if (storedUser.permissionsArray && storedUser.permissionsArray.length > 0) {
+        console.log('📦 Using stored permissions:', storedUser.permissionsArray);
+        setUserPermissions(storedUser.permissionsArray);
+        setLoading(false);
+        return;
+      }
+      
+      // If not in storage, fetch from API
+      let roleId = storedUser.id || storedUser._id;
+      
+      if (!roleId) {
+        console.warn('⚠️ No role ID found');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔍 Fetching permissions for role ID:', roleId);
+      
+      const token = localStorage.getItem('roleToken');
+      const response = await API.get(`/permissions/role/${roleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('📦 Permissions API response:', response.data);
       
       if (response.data.success) {
-        // Get permissions array
-        const permsArray = response.data.role?.permissionsArray || [];
+        let permsArray = [];
+        
+        if (response.data.role?.permissionsArray) {
+          permsArray = response.data.role.permissionsArray;
+        } else if (response.data.permissionsArray) {
+          permsArray = response.data.permissionsArray;
+        } else if (response.data.permissions) {
+          permsArray = response.data.permissions.map(p => p.pageId);
+        }
+        
+        console.log('✅ Permissions loaded from API:', permsArray);
         setUserPermissions(permsArray);
-        console.log('User Permissions:', permsArray);
+        
+        // Update stored user
+        storedUser.permissionsArray = permsArray;
+        localStorage.setItem('roleUser', JSON.stringify(storedUser));
+      } else {
+        console.warn('⚠️ No permissions found in API response');
+        setUserPermissions([]);
       }
+      
     } catch (error) {
-      console.error('Error fetching permissions:', error);
+      console.error('❌ Error fetching permissions:', error);
+      if (error.response?.status === 401) {
+        console.log('🔐 Token expired, logging out...');
+        localStorage.removeItem('roleToken');
+        localStorage.removeItem('roleUser');
+        window.location.href = '/roles-login';
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Check if user has permission for a page
+  // Check if user has permission for a page
   const hasPermission = (pageId) => {
-    if (userType === 'admin') return true; // Admin ko sab permissions
-    return userPermissions.includes(pageId);
-  };
-
-  // ✅ Filter role menu items based on permissions
-  const getFilteredRoleMenuItems = () => {
-    // Filter main menu items
-    const filtered = roleMenuItems.filter(item => {
-      // Check if main item has permission
-      if (item.path) {
-        const pageId = item.path.replace('/', '').replace(/-/g, '-');
-        return hasPermission(pageId);
-      }
-      
-      // If it has submenu, check if any submenu item has permission
-      if (item.subMenu) {
-        const hasAnySubPermission = item.subMenu.some(subItem => {
-          const pageId = subItem.path.replace('/', '').replace(/-/g, '-');
-          return hasPermission(pageId);
-        });
-        return hasAnySubPermission;
-      }
-      
-      return false;
-    });
-
-    // Filter submenu items for each main item
-    return filtered.map(item => {
-      if (item.subMenu) {
-        return {
-          ...item,
-          subMenu: item.subMenu.filter(subItem => {
-            const pageId = subItem.path.replace('/', '').replace(/-/g, '-');
-            return hasPermission(pageId);
-          })
-        };
-      }
-      return item;
-    });
-  };
-
-  const openSidebar = () => setIsOpen(true);
-  const closeSidebar = () => setIsOpen(false);
-
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      closeSidebar();
+    if (userType === 'admin') return true;
+    
+    if (!pageId) return false;
+    
+    // Super admin has all permissions
+    if (userRole === 'super-admin') return true;
+    
+    // Check if pageId exists in permissions array
+    const hasPerm = userPermissions.includes(pageId);
+    
+    if (!hasPerm) {
+      console.log(`❌ No permission for: ${pageId}`);
     }
+    
+    return hasPerm;
   };
 
-  const toggleSubMenu = (menuId) => {
-    setExpandedMenus(prev =>
-      prev.includes(menuId)
-        ? prev.filter(id => id !== menuId)
-        : [...prev, menuId]
-    );
-  };
-
-  // ✅ Admin Menu Items with Dashboard Submenu
+  // Define all possible menu items with their page IDs
   const adminMenuItems = [
     {
       id: 'dashboard',
@@ -209,20 +222,6 @@ const Sidebar = () => {
           icon: <FiBarChart2 />, 
           path: '/Admin-Dashboard-overall',
           pageId: 'admin-dashboard'
-        },
-        { 
-          id: 'payments-dashboard', 
-          title: 'Payments Dashboard', 
-          icon: <FiCreditCard />, 
-          path: '/payments-dashboard',
-          pageId: 'payments-dashboard'
-        },
-        { 
-          id: 'orders-dashboard', 
-          title: 'Orders Dashboard', 
-          icon: <FiShoppingCart />, 
-          path: '/orders-dashboard',
-          pageId: 'orders-dashboard'
         },
       ]
     },
@@ -373,7 +372,6 @@ const Sidebar = () => {
     }
   ];
 
-  // ✅ Role Menu Items with Dashboard Submenu
   const roleMenuItems = [
     {
       id: 'dashboard',
@@ -387,49 +385,6 @@ const Sidebar = () => {
           icon: <FiBarChart2 />, 
           path: '/Role-dashboard',
           pageId: 'role-dashboard'
-        },
-        { 
-          id: 'payments-dashboard', 
-          title: 'Payments Dashboard', 
-          icon: <FiCreditCard />, 
-          path: '/role-payments-dashboard',
-          pageId: 'payments-dashboard'
-        },
-        { 
-          id: 'orders-dashboard', 
-          title: 'Orders Dashboard', 
-          icon: <FiShoppingCart />, 
-          path: '/role-orders-dashboard',
-          pageId: 'orders-dashboard'
-        },
-      ]
-    },
-    {
-      id: 'quotation',
-      title: 'Quotation',
-      icon: <FaFileInvoice />,
-      pageId: 'quotation',
-      subMenu: [
-        { 
-          id: 'add-material', 
-          title: 'Add Material', 
-          icon: <FiPackage />, 
-          path: '/role-materials',
-          pageId: 'admin-material'
-        },
-        { 
-          id: 'add-quotation', 
-          title: 'Add Quotation', 
-          icon: <FiFilePlus />, 
-          path: '/role-add-quotation',
-          pageId: 'quotation-customer'
-        },
-        { 
-          id: 'all-quotations', 
-          title: 'All Quotations', 
-          icon: <FiFileText />, 
-          path: '/role-quotations',
-          pageId: 'all-quotations'
         },
       ]
     },
@@ -492,45 +447,90 @@ const Sidebar = () => {
       pageId: 'role-orders'
     },
     {
-      id: 'settings',
-      title: 'Settings',
-      icon: <FiSettings />,
-      pageId: 'settings',
+      id: 'quotation',
+      title: 'Quotation',
+      icon: <FaFileInvoice />,
+      pageId: 'quotation',
       subMenu: [
         { 
-          id: 'profile', 
-          title: 'Profile', 
-          icon: <FiUser />, 
-          path: '/role-profile',
-          pageId: 'profile'
+          id: 'all-quotations', 
+          title: 'All Quotations', 
+          icon: <FiFileText />, 
+          path: '/role-quotations',
+          pageId: 'role-quotations'
         },
       ]
     }
   ];
 
-  // Get filtered menu based on user type
-  const menuItems = userType === 'admin' 
-    ? adminMenuItems 
-    : getFilteredRoleMenuItems();
+  // Filter role menu items based on permissions
+  const getFilteredRoleMenuItems = () => {
+    console.log('🔍 Filtering menu items with permissions:', userPermissions);
+    
+    const filtered = roleMenuItems.filter(item => {
+      // If item has no submenu, check its own permission
+      if (!item.subMenu || item.subMenu.length === 0) {
+        return hasPermission(item.pageId);
+      }
+      
+      // If item has submenu, check if any subitem has permission
+      const hasAnySubPermission = item.subMenu.some(subItem => {
+        return hasPermission(subItem.pageId);
+      });
+      
+      return hasAnySubPermission;
+    });
 
-  const handleLogout = () => {
-    if (userType === 'admin') {
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('user');
-      navigate('/');
-    } else {
-      localStorage.removeItem('roleToken');
-      localStorage.removeItem('roleUser');
-      navigate('/roles-login');
+    // Filter submenus
+    const filteredWithSubmenus = filtered.map(item => {
+      if (item.subMenu && item.subMenu.length > 0) {
+        const filteredSubMenu = item.subMenu.filter(subItem => {
+          return hasPermission(subItem.pageId);
+        });
+        
+        return {
+          ...item,
+          subMenu: filteredSubMenu
+        };
+      }
+      return item;
+    }).filter(item => {
+      // Remove items that have empty submenus
+      if (item.subMenu && item.subMenu.length === 0) {
+        return false;
+      }
+      return true;
+    });
+
+    console.log('✅ Filtered menu items:', filteredWithSubmenus);
+    return filteredWithSubmenus;
+  };
+
+  const openSidebar = () => setIsOpen(true);
+  const closeSidebar = () => setIsOpen(false);
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      closeSidebar();
     }
+  };
+
+  const toggleSubMenu = (menuId) => {
+    setExpandedMenus(prev =>
+      prev.includes(menuId)
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
   };
 
   const handleMenuItemClick = (item) => {
     setActiveItem(item.id);
     if (item.path && !item.subMenu) {
-      // Check permission before navigating
       if (userType === 'admin' || hasPermission(item.pageId)) {
         navigate(item.path);
+      } else {
+        console.log('❌ No permission for:', item.pageId);
+        navigate('/no-permission');
       }
     }
     if (item.subMenu) toggleSubMenu(item.id);
@@ -538,13 +538,17 @@ const Sidebar = () => {
 
   const handleSubMenuItemClick = (subItem) => {
     setActiveSubItem(subItem.id);
-    // Check permission before navigating
     if (userType === 'admin' || hasPermission(subItem.pageId)) {
-      if (subItem.path) navigate(subItem.path);
+      if (subItem.path) {
+        console.log('✅ Navigating to:', subItem.path);
+        navigate(subItem.path);
+      }
+    } else {
+      console.log('❌ No permission for subitem:', subItem.pageId);
+      navigate('/no-permission');
     }
   };
 
-  // Get user display info
   const getUserDisplay = () => {
     if (userType === 'admin') {
       return {
@@ -554,10 +558,13 @@ const Sidebar = () => {
         badgeColor: '#3b82f6'
       };
     } else {
+      const roleBadge = userRole === 'manager' ? '👔 Manager' : 
+                        userRole === 'supervisor' ? '👁️ Supervisor' : 
+                        userRole === 'data_entry' ? '📝 Data Entry' : '👤 User';
       return {
         name: userData.name,
         email: userData.email,
-        badge: `👤 ${userRole}`,
+        badge: roleBadge,
         badgeColor: userRole === 'manager' ? '#8b5cf6' : '#10b981'
       };
     }
@@ -565,18 +572,17 @@ const Sidebar = () => {
 
   const userDisplay = getUserDisplay();
 
-  // Loading state for permissions
   if (userType === 'role' && loading) {
     return (
       <div className="sidebar-loading">
         <div className="loading-spinner"></div>
+        <p>Loading permissions...</p>
       </div>
     );
   }
 
   return (
     <>
-      {/* Mobile Navbar */}
       <div className="mobile-navbar">
         <div className="mobile-logo">
           {userType === 'admin' ? 'Admin Panel' : 'Role Panel'}
@@ -586,7 +592,6 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* Overlay */}
       {isOpen && (
         <div 
           className="sidebar-overlay" 
@@ -594,12 +599,10 @@ const Sidebar = () => {
         ></div>
       )}
 
-      {/* Sidebar */}
       <div 
         className={`admin-sidebar ${isOpen ? 'show' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
         <div className="mobile-close-wrapper">
           <FiX 
             size={24} 
@@ -608,25 +611,24 @@ const Sidebar = () => {
           />
         </div>
 
-        {/* User Profile with Role Badge */}
         <div className="user-profile">
           <div className="user-avatar">
             <FaUserCircle />
           </div>
           <div className="user-info">
             <span className="user-name">{userDisplay.name}</span>
+           
             <span className="user-email">{userDisplay.email}</span>
           </div>
         </div>
 
-        {/* Main Menu */}
         <div className="sidebar-nav">
           <div className="nav-section">
             <h3 className="nav-section-title">
               {userType === 'admin' ? 'ADMIN MENU' : 'ROLE MENU'}
-              {userType === 'role' && (
+              {userType === 'role' && userPermissions.length > 0 && (
                 <span className="menu-count">
-                  ({menuItems.length} items)
+                  ({menuItems.length} menus)
                 </span>
               )}
             </h3>
@@ -634,7 +636,6 @@ const Sidebar = () => {
             <ul className="nav-list">
               {menuItems.map(item => (
                 <li key={item.id} className="nav-item-wrapper">
-
                   <div
                     className={`nav-item ${activeItem === item.id ? 'active' : ''}`}
                     onClick={() => handleMenuItemClick(item)}
@@ -670,18 +671,28 @@ const Sidebar = () => {
               ))}
             </ul>
 
-            {userType === 'role' && menuItems.length === 0 && (
+            {userType === 'role' && menuItems.length === 0 && !loading && (
               <div className="no-permissions-message">
-                <p>No permissions available</p>
-                <small>Contact administrator</small>
+                <FiAlertCircle className="no-perm-icon" />
+                <p>No permissions assigned</p>
+                <small>Please contact administrator to get access</small>
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer */}
         <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
+          <button className="logout-btn" onClick={() => {
+            if (userType === 'admin') {
+              localStorage.removeItem('adminToken');
+              localStorage.removeItem('user');
+              navigate('/');
+            } else {
+              localStorage.removeItem('roleToken');
+              localStorage.removeItem('roleUser');
+              navigate('/roles-login');
+            }
+          }}>
             <FiLogOut className="logout-icon" />
             <span className="logout-text">Sign out</span>
           </button>

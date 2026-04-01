@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiPrinter, FiDownload, FiArrowLeft, FiAlertCircle, FiImage, FiX, FiEdit2, FiPercent, FiDollarSign } from 'react-icons/fi';
 import { getQuotationById } from '../../../api/quotationApi';
+import { getProfile } from '../../../api/profileApi';
+
+
 
 /* ─────────────────────────────────────────────────────────────
    ALL STYLES  — no external CSS file needed
@@ -479,6 +482,36 @@ const GLOBAL_CSS = `
   }
 `;
 
+/* ✅ FIXED: Helper function to get image URL */
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  
+  // Agar pehle se full URL hai
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Backend URL - jo browser mein kaam kar raha hai
+  const baseUrl = 'http://localhost:5000';
+  
+  // Image ka full URL banao
+  let cleanUrl = imageUrl;
+  
+  // Agar URL /uploads se shuru ho raha hai to seedha jodo
+  if (cleanUrl.startsWith('/uploads')) {
+    cleanUrl = cleanUrl;
+  } else if (cleanUrl.startsWith('./uploads')) {
+    cleanUrl = cleanUrl.substring(1);
+  } else if (cleanUrl.startsWith('../uploads')) {
+    cleanUrl = cleanUrl.substring(2);
+  }
+  
+  const fullUrl = `${baseUrl}${cleanUrl}`;
+  console.log('🖼️ Generated image URL:', fullUrl);
+  
+  return fullUrl;
+};
+
 /* ═══════════════════════════════════════════════════════════
    COMPONENT
 ═══════════════════════════════════════════════════════════ */
@@ -491,13 +524,8 @@ const PrintQuotation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCost, setShowCost] = useState(true);
-  const [companyLogo, setCompanyLogo] = useState(null);
-  const [brandName, setBrandName] = useState('Haider Velding Wala');
-  const [logoError, setLogoError] = useState(false);
-  const [showLogoModal, setShowLogoModal] = useState(false);
-  const [logoUrl, setLogoUrl] = useState('');
-  const [tempBrandName, setTempBrandName] = useState('');
-  const [imageErrors, setImageErrors] = useState({});
+  const [profileData, setProfileData] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   
   // Discount states
   const [discountType, setDiscountType] = useState('percentage');
@@ -505,11 +533,19 @@ const PrintQuotation = () => {
   const [discountFixed, setDiscountFixed] = useState(0);
   
   // Signature states
-  const [authorizedSignatory, setAuthorizedSignatory] = useState('Muhammad Haider');
+  const [authorizedSignatory, setAuthorizedSignatory] = useState('');
   const [customerSignatory, setCustomerSignatory] = useState('');
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [tempAuthorizedSignatory, setTempAuthorizedSignatory] = useState('');
   const [tempCustomerSignatory, setTempCustomerSignatory] = useState('');
+  
+  // Logo error state
+  const [logoError, setLogoError] = useState(false);
+  const [imageErrors, setImageErrors] = useState({});
+
+  useEffect(() => {
+    loadBusinessProfile();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -537,37 +573,68 @@ const PrintQuotation = () => {
       setLoading(false);
     }
     
-    const savedLogo = localStorage.getItem('companyLogo');
-    if (savedLogo && savedLogo !== 'undefined' && savedLogo !== 'null') {
-      setCompanyLogo(savedLogo);
-      setLogoUrl(savedLogo);
-    }
-    
-    const savedBrandName = localStorage.getItem('brandName');
-    if (savedBrandName && savedBrandName !== 'undefined' && savedBrandName !== 'null') {
-      setBrandName(savedBrandName);
-      setTempBrandName(savedBrandName);
-    }
-    
     const savedDiscountType = localStorage.getItem('discountType');
     const savedDiscountPercentage = localStorage.getItem('discountPercentage');
     const savedDiscountFixed = localStorage.getItem('discountFixed');
     if (savedDiscountType) setDiscountType(savedDiscountType);
     if (savedDiscountPercentage) setDiscountPercentage(parseFloat(savedDiscountPercentage));
     if (savedDiscountFixed) setDiscountFixed(parseFloat(savedDiscountFixed));
-    
-    const savedAuthorized = localStorage.getItem('authorizedSignatory');
-    if (savedAuthorized && savedAuthorized !== 'undefined' && savedAuthorized !== 'null') {
-      setAuthorizedSignatory(savedAuthorized);
-      setTempAuthorizedSignatory(savedAuthorized);
-    }
-    
-    const savedCustomer = localStorage.getItem('customerSignatory');
-    if (savedCustomer && savedCustomer !== 'undefined' && savedCustomer !== 'null') {
-      setCustomerSignatory(savedCustomer);
-      setTempCustomerSignatory(savedCustomer);
-    }
   }, [id]);
+
+  const loadBusinessProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const response = await getProfile();
+      console.log("Business profile loaded:", response);
+      
+      let profile = null;
+      if (response?.data?.data) {
+        profile = response.data.data;
+      } else if (response?.data) {
+        profile = response.data;
+      } else if (response) {
+        profile = response;
+      }
+      
+      setProfileData(profile);
+      
+      // Set authorized signatory from profile if available
+      if (profile?.ownerName) {
+        setAuthorizedSignatory(profile.ownerName);
+        setTempAuthorizedSignatory(profile.ownerName);
+      } else {
+        const savedAuthorized = localStorage.getItem('authorizedSignatory');
+        if (savedAuthorized && savedAuthorized !== 'undefined' && savedAuthorized !== 'null') {
+          setAuthorizedSignatory(savedAuthorized);
+          setTempAuthorizedSignatory(savedAuthorized);
+        }
+      }
+      
+      // Set customer signatory from localStorage
+      const savedCustomer = localStorage.getItem('customerSignatory');
+      if (savedCustomer && savedCustomer !== 'undefined' && savedCustomer !== 'null') {
+        setCustomerSignatory(savedCustomer);
+        setTempCustomerSignatory(savedCustomer);
+      }
+      
+    } catch (error) {
+      console.error("Error loading business profile:", error);
+      // Fallback to localStorage if profile not found
+      const savedAuthorized = localStorage.getItem('authorizedSignatory');
+      if (savedAuthorized && savedAuthorized !== 'undefined' && savedAuthorized !== 'null') {
+        setAuthorizedSignatory(savedAuthorized);
+        setTempAuthorizedSignatory(savedAuthorized);
+      }
+      
+      const savedCustomer = localStorage.getItem('customerSignatory');
+      if (savedCustomer && savedCustomer !== 'undefined' && savedCustomer !== 'null') {
+        setCustomerSignatory(savedCustomer);
+        setTempCustomerSignatory(savedCustomer);
+      }
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const fetchQuotationDetails = async () => {
     try {
@@ -587,53 +654,9 @@ const PrintQuotation = () => {
     }
   };
 
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return '';
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl;
-    }
-    const baseUrl = import.meta.env.VITE_API_URL ;
-    let cleanUrl = imageUrl.replace(/^\.\.\/|^\.\//, '');
-    if (!cleanUrl.startsWith('/')) {
-      cleanUrl = '/' + cleanUrl;
-    }
-    return `${baseUrl}${cleanUrl}`;
-  };
-
   const handleImageError = (index, url) => {
     console.error(`Failed to load image ${index + 1}:`, url);
     setImageErrors(prev => ({ ...prev, [index]: true }));
-  };
-
-  const handleLogoClick = () => {
-    setLogoUrl(companyLogo || '');
-    setTempBrandName(brandName);
-    setShowLogoModal(true);
-  };
-
-  const handleSaveLogo = () => {
-    if (logoUrl && logoUrl.trim()) {
-      setCompanyLogo(logoUrl.trim());
-      localStorage.setItem('companyLogo', logoUrl.trim());
-      setLogoError(false);
-    } else {
-      setCompanyLogo(null);
-      localStorage.removeItem('companyLogo');
-    }
-    
-    if (tempBrandName && tempBrandName.trim()) {
-      setBrandName(tempBrandName.trim());
-      localStorage.setItem('brandName', tempBrandName.trim());
-    }
-    
-    setShowLogoModal(false);
-  };
-
-  const handleRemoveLogo = () => {
-    setCompanyLogo(null);
-    localStorage.removeItem('companyLogo');
-    setLogoUrl('');
-    setShowLogoModal(false);
   };
 
   const handleLogoError = () => {
@@ -727,14 +750,14 @@ const PrintQuotation = () => {
   };
 
   const handleDownloadPDF = () => {
-    const base = import.meta.env.VITE_API_URL;
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const mode = showCost ? 'with-cost' : 'without-cost';
-    window.open(`${base}/quotations/print/${id}/${mode}`, '_blank');
+    window.open(`${base}/api/quotations/print/${id}/${mode}`, '_blank');
   };
 
   const colCount = showCost ? 4 : 2;
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <>
         <style>{GLOBAL_CSS}</style>
@@ -762,47 +785,31 @@ const PrintQuotation = () => {
     );
   }
 
+  // Get logo URL from profile
+  const getLogoUrl = () => {
+    if (!profileData) return null;
+    
+    if (profileData.logoUrl) {
+      return profileData.logoUrl;
+    } else if (profileData.logo) {
+      const baseURL = 'http://localhost:5000';
+      return `${baseURL}/${profileData.logo}`;
+    }
+    return null;
+  };
+
+  const logoUrl = getLogoUrl();
+  const shopName = profileData?.shopName || 'Haider Velding Wala';
+  const ownerName = profileData?.ownerName || 'Muhammad Haider';
+  const businessPhone = profileData?.phone || '';
+  const businessWhatsapp = profileData?.whatsapp || '';
+  const businessAddress = profileData?.address || '';
+  const businessGst = profileData?.gstNumber || '';
+  const businessFooterNote = profileData?.footerNote || 'Thank you for your business!';
+
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-
-      {showLogoModal && (
-        <div className="logo-modal-overlay" onClick={() => setShowLogoModal(false)}>
-          <div className="logo-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Company Settings</h3>
-            <input
-              type="text"
-              className="logo-url-input"
-              placeholder="Enter logo image URL (https://example.com/logo.png)"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-            />
-            <input
-              type="text"
-              className="brand-name-input"
-              placeholder="Enter brand name"
-              value={tempBrandName}
-              onChange={(e) => setTempBrandName(e.target.value)}
-            />
-            {logoUrl && (
-              <div className="logo-preview">
-                <img src={logoUrl} alt="Logo Preview" onError={handleLogoError} />
-              </div>
-            )}
-            <div className="modal-buttons">
-              <button className="pq-btn pq-btn--gray" onClick={handleRemoveLogo}>
-                Remove Logo
-              </button>
-              <button className="pq-btn pq-btn--blue" onClick={handleSaveLogo}>
-                Save
-              </button>
-              <button className="pq-btn pq-btn--gray" onClick={() => setShowLogoModal(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showSignatureModal && (
         <div className="logo-modal-overlay" onClick={() => setShowSignatureModal(false)}>
@@ -839,9 +846,6 @@ const PrintQuotation = () => {
           <FiArrowLeft /> Back
         </button>
         <div className="action-group">
-          <button className="pq-btn pq-btn--orange" onClick={handleLogoClick}>
-            <FiImage /> Company Settings
-          </button>
           <button className="pq-btn pq-btn--purple" onClick={handleSignatureClick}>
             <FiEdit2 /> Signatures
           </button>
@@ -861,26 +865,23 @@ const PrintQuotation = () => {
         <div className="pq-paper" ref={printRef}>
           <div className="pq-header">
             <div className="pq-logo-box">
-              {companyLogo && !logoError ? (
+              {logoUrl && !logoError ? (
                 <>
-                  <div className="logo-image-container" onClick={handleLogoClick}>
+                  <div className="logo-image-container">
                     <img 
-                      src={companyLogo} 
+                      src={logoUrl} 
                       alt="Company Logo" 
                       className="company-logo-img"
                       onError={handleLogoError}
                       crossOrigin="anonymous"
                     />
                   </div>
-                  <div className="brand-name-text">{brandName}</div>
-                  <button className="edit-logo-btn" onClick={handleLogoClick}>
-                    <FiImage /> Edit
-                  </button>
+                  <div className="brand-name-text">{shopName}</div>
                 </>
               ) : (
-                <div onClick={handleLogoClick} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                <div style={{ cursor: 'pointer', textAlign: 'center' }}>
                   <div className="pq-logo-icon">✦</div>
-                  <div className="pq-logo-name">{brandName}</div>
+                  <div className="pq-logo-name">{shopName}</div>
                   <div className="pq-logo-sub">Workforce Software</div>
                 </div>
               )}
@@ -900,12 +901,11 @@ const PrintQuotation = () => {
                     <td className="meta-val">{formatDate(quotation.createdAt)}</td>
                   </tr>
                   <tr>
-                    <td className="meta-label">Valid Through:穷 </td>
+                    <td className="meta-label">Valid Through:</td>
                     <td className="meta-val">{formatDate(quotation.validUntil)}</td>
-                    </tr>
-                   ) 
+                  </tr>
                 </tbody>
-                </table>
+              </table>
             </div>
           </div>
 
@@ -913,11 +913,17 @@ const PrintQuotation = () => {
             <div>
               <div className="pq-section-label">Sender</div>
               <div className="pq-address-box">
-                <p className="addr-name">{brandName}</p>
-                <p>[Company Address Line 1]</p>
-                <p>[Company Address Line 2]</p>
-                <p>[Company Address Line 3]</p>
-                <p>GST Nr: [GST Number]</p>
+                <p className="addr-name">{shopName}</p>
+                {businessAddress && <p>{businessAddress}</p>}
+                {businessPhone && <p>Phone: {businessPhone}</p>}
+                {businessWhatsapp && <p>WhatsApp: {businessWhatsapp}</p>}
+                {businessGst && <p>GST/NTN: {businessGst}</p>}
+                {(!businessAddress && !businessPhone && !businessWhatsapp) && (
+                  <>
+                    <p>[Company Address Line 1]</p>
+                    <p>[Company Address Line 2]</p>
+                  </>
+                )}
               </div>
             </div>
             <div>
@@ -930,7 +936,7 @@ const PrintQuotation = () => {
             </div>
           </div>
 
-          {/* REFERENCE IMAGES SECTION */}
+          {/* ✅ FIXED: REFERENCE IMAGES SECTION with correct URL */}
           {quotation.images && quotation.images.length > 0 ? (
             <div className="images-section">
               <div className="images-header">
@@ -949,6 +955,7 @@ const PrintQuotation = () => {
                           src={fullImageUrl} 
                           alt={image.description || `Reference Image ${index + 1}`}
                           onError={() => handleImageError(index, fullImageUrl)}
+                          onLoad={() => console.log(`✅ Image ${index} loaded:`, fullImageUrl)}
                           style={{ width: '100%', height: '100px', objectFit: 'cover' }}
                         />
                       ) : (
@@ -960,9 +967,11 @@ const PrintQuotation = () => {
                           justifyContent: 'center',
                           background: '#f5f5f5',
                           color: '#999',
-                          fontSize: '12px'
+                          fontSize: '12px',
+                          flexDirection: 'column'
                         }}>
                           <FiImage size={24} />
+                          <span style={{ fontSize: '10px', marginTop: '5px' }}>Failed to load</span>
                         </div>
                       )}
                       {image.description && (
@@ -1130,7 +1139,7 @@ const PrintQuotation = () => {
             <div className="signature-grid">
               <div className="signature-box">
                 <div className="signature-line"></div>
-                <div className="signature-name">{authorizedSignatory}</div>
+                <div className="signature-name">{authorizedSignatory || ownerName}</div>
                 <div className="signature-title">Authorized Signatory</div>
                 <div className="signature-date">Date: {formatDate(new Date())}</div>
               </div>
@@ -1144,7 +1153,7 @@ const PrintQuotation = () => {
           </div>
 
           <div className="pq-footer">
-            Thank you for your business!
+            {businessFooterNote}
           </div>
         </div>
       </div>

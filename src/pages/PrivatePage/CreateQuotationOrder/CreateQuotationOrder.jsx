@@ -67,9 +67,10 @@ const CreateQuotationOrder = () => {
   useEffect(() => {
     const finalTotal = parseInt(orderData.finalTotal) || 0;
     const advancePayment = parseInt(orderData.advancePayment) || 0;
+    const remaining = Math.max(finalTotal - advancePayment, 0);
     setOrderData(prev => ({
       ...prev,
-      remainingBalance: finalTotal - advancePayment
+      remainingBalance: remaining
     }));
   }, [orderData.finalTotal, orderData.advancePayment]);
 
@@ -289,14 +290,14 @@ const CreateQuotationOrder = () => {
       setOrderData(prev => ({
         ...prev,
         finalTotal: finalTotal,
-        remainingBalance: finalTotal - (prev.advancePayment || 0)
+        remainingBalance: Math.max(finalTotal - (prev.advancePayment || 0), 0)
       }));
     } else if (name === "advancePayment") {
       const advance = parseInt(value) || 0;
       setOrderData(prev => ({
         ...prev,
         advancePayment: advance,
-        remainingBalance: (prev.finalTotal || 0) - advance
+        remainingBalance: Math.max((prev.finalTotal || 0) - advance, 0)
       }));
     } else if (name === "dueDate") {
       setOrderData(prev => ({ ...prev, dueDate: value }));
@@ -331,6 +332,15 @@ const CreateQuotationOrder = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
+  // Derive paymentStatus to match backend enum: pending | partial | paid
+  const getPaymentStatus = (finalTotal, advancePayment) => {
+    const total = parseInt(finalTotal) || 0;
+    const advance = parseInt(advancePayment) || 0;
+    if (advance >= total && total > 0) return "paid";
+    if (advance > 0) return "partial";
+    return "pending";
+  };
+
   const validateOrder = () => {
     if (orderItems.length === 0) {
       showToast("Please add at least one item to the order", "error");
@@ -347,6 +357,13 @@ const CreateQuotationOrder = () => {
     
     if (advancePayment > finalTotal) {
       showToast("Advance payment cannot be greater than final total", "error");
+      return false;
+    }
+
+    // customer is required by backend
+    const customerId = quotationData?.customerId || quotationData?.customer;
+    if (!customerId) {
+      showToast("Customer information is missing in quotation", "error");
       return false;
     }
     
@@ -368,29 +385,38 @@ const CreateQuotationOrder = () => {
       
       const finalTotal = parseInt(orderData.finalTotal) || 0;
       const advancePayment = parseInt(orderData.advancePayment) || 0;
-      
-      // Prepare order items (combines quotation items + new items)
+      const remainingBalance = Math.max(finalTotal - advancePayment, 0);
+      const paymentStatus = getPaymentStatus(finalTotal, advancePayment);
+
+      // customer field: backend requires ObjectId ref to Customer
+      const customerId = quotationData.customerId || quotationData.customer;
+
+      // Prepare items matching backend schema:
+      // { itemName, quantity (min:1), unitPrice (min:0), totalPrice (min:0), notes }
       const orderItemsPayload = orderItems.map(item => ({
         itemName: item.name,
-        quantity: item.quantity,
-        unitPrice: item.rate,
-        totalPrice: item.total,
+        quantity: Math.max(parseInt(item.quantity) || 1, 1),
+        unitPrice: parseInt(item.rate) || 0,
+        totalPrice: parseInt(item.total) || 0,
         notes: item.notes || ''
       }));
       
       const orderPayload = {
-        quotationId: quotationData._id,
-        finalTotal: finalTotal,
-        advancePayment: advancePayment,
-        dueDate: orderData.dueDate || null,
-        notes: orderData.notes || `Order created from Quotation: ${quotationData.quotationNumber || 'N/A'}`,
-        status: orderData.status,
-        items: orderItemsPayload
+        customer: customerId,                          // required by backend
+        quotationId: quotationData._id,                // optional ref to Quotation
+        items: orderItemsPayload,                      // array of order items
+        finalTotal: finalTotal,                        // required, min:0
+        advancePayment: advancePayment,                // default:0
+        remainingBalance: remainingBalance,            // calculated
+        paymentStatus: paymentStatus,                  // pending | partial | paid
+        status: orderData.status,                      // pending | in-progress | completed
+        dueDate: orderData.dueDate || null,            // Date | null
+        notes: orderData.notes ||
+          `Order created from Quotation: ${quotationData.quotationNumber || 'N/A'}`
       };
 
-      console.log("Creating order from quotation with items:", orderPayload);
+      console.log("Creating order from quotation with payload:", orderPayload);
       
-      // ✅ Use createOrderFromQuotation API
       const response = await createOrderFromQuotation(orderPayload);
       console.log("Order created:", response);
       
@@ -428,7 +454,7 @@ const CreateQuotationOrder = () => {
   }
 
   return (
-    <div className="main-container-quotation-order">
+    <div className="main-container-quotation-order sideber-container-Mobile">
       <Sidebar />
       
       <div className="content-wrapper-quotation-order">
@@ -788,12 +814,9 @@ const CreateQuotationOrder = () => {
               </div>
               <div className="payment-status-row-quotation-order">
                 <span>Payment Status:</span>
-                <span className={`payment-status-badge-quotation-order ${
-                  orderData.advancePayment >= orderData.finalTotal ? 'paid' : 
-                  orderData.advancePayment > 0 ? 'partial' : 'pending'
-                }`}>
-                  {orderData.advancePayment >= orderData.finalTotal ? 'Paid' : 
-                   orderData.advancePayment > 0 ? 'Partial' : 'Pending'}
+                <span className={`payment-status-badge-quotation-order ${getPaymentStatus(orderData.finalTotal, orderData.advancePayment)}`}>
+                  {getPaymentStatus(orderData.finalTotal, orderData.advancePayment) === 'paid' ? 'Paid' :
+                   getPaymentStatus(orderData.finalTotal, orderData.advancePayment) === 'partial' ? 'Partial' : 'Pending'}
                 </span>
               </div>
             </div>

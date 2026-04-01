@@ -13,7 +13,217 @@
   overflow: hidden;
   background: linear-gradient(135deg, var(--bg-color) 0%, var(--light-gray) 100%);
 }
+/* ======================
+   OTP INPUT STYLES
+   ====================== */
 
+/* OTP Form */
+.otp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* OTP Input Group */
+.otp-input-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+/* OTP Input Base Style */
+.otp-input {
+  width: 55px;
+  height: 65px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  font-family: 'Courier New', monospace;
+  background: var(--white);
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* OTP Input Focus State */
+.otp-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  transform: scale(1.05);
+  background: var(--white);
+}
+
+/* OTP Input Hover State */
+.otp-input:hover:not(:disabled) {
+  border-color: var(--primary-light);
+  background: var(--light-gray);
+}
+
+/* OTP Input Disabled State */
+.otp-input:disabled {
+  background-color: var(--gray);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* OTP Input with Value */
+.otp-input:not(:placeholder-shown) {
+  border-color: var(--primary-color);
+  background: linear-gradient(145deg, var(--white), var(--light-gray));
+}
+
+/* OTP Timer */
+.otp-timer {
+  text-align: center;
+  margin: 10px 0;
+  padding: 10px;
+}
+
+.timer-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--light-gray), var(--gray));
+  border-radius: 25px;
+  font-size: 14px;
+  color: var(--primary-color);
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.timer-text strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: var(--white);
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+/* Resend Button */
+.resend-btn {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+  border: none;
+  color: var(--white);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 25px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.resend-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.resend-btn:disabled {
+  background: var(--gray);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Back Button */
+.back-btn {
+  width: 100%;
+  padding: 14px;
+  background: none;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  background: var(--white);
+}
+
+.back-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(37, 99, 235, 0.05);
+  transform: translateY(-2px);
+}
+
+.back-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive OTP Inputs */
+@media (max-width: 768px) {
+  .otp-input {
+    width: 50px;
+    height: 60px;
+    font-size: 22px;
+  }
+  
+  .otp-input-group {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .otp-input {
+    width: 42px;
+    height: 52px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+  
+  .otp-input-group {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .otp-input {
+    width: 38px;
+    height: 48px;
+    font-size: 18px;
+  }
+  
+  .otp-input-group {
+    gap: 6px;
+  }
+}
+
+/* OTP Input Error Animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.otp-input.error {
+  border-color: var(--error-color);
+  animation: shake 0.5s ease-in-out;
+}
+
+/* OTP Input Success State */
+.otp-input.success {
+  border-color: var(--success-color);
+  background-color: var(--success-light);
+}
 /* Toast Message */
 .toast-message {
   position: fixed;

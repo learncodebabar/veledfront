@@ -289,7 +289,7 @@ const AdminMaterial = () => {
   }
 
   return (
-    <div className="AdminMaterial">
+    <div className="AdminMaterial sideber-container-Mobile">
       <div className="AdminMaterial-container">
         <Sidebar />
         

@@ -132,6 +132,7 @@
   transition: all 0.3s ease;
   font-family: var(--font-primary);
   border: 1px solid transparent;
+  max-width: 200px;
 }
 
 .all-quotations-btn-primary:hover {

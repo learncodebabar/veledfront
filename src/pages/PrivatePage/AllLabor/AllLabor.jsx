@@ -109,7 +109,7 @@ const AllLabor = () => {
 
   if (loading) {
     return (
-      <div className="all-labor-page">
+      <div className="all-labor-page sideber-container-Mobile">
         <Sidebar />
         <div className="all-labor-content all-labor-loading-state">
           <div className="all-labor-spinner"></div>

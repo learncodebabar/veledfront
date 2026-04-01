@@ -461,7 +461,7 @@ const CreateNewOrder = () => {
 
   if (loadingCustomer) {
     return (
-      <div className="main-container-create-order">
+      <div className="main-container-create-order sideber-container-Mobile">
         <Sidebar />
         <div className="content-wrapper-create-order">
           <div className="loading-container-create-order">

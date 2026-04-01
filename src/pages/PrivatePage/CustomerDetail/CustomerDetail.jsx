@@ -116,7 +116,7 @@ const CustomerDetail = () => {
   // Customer not found state
   if (!customer) {
     return (
-      <div className="main-container-CustomerDetail">
+      <div className="main-container-CustomerDetail sideber-container-Mobile">
         <Sidebar />
         <div className="content-wrapper-CustomerDetail error-container">
           <h2>Customer not found</h2>

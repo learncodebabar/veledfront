@@ -21,7 +21,7 @@ const RoleLogin = () => {
   const [userId, setUserId] = useState(null);
 
   // UI State
-  const [step, setStep] = useState(1); // 1: Credentials, 2: OTP
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, type: '', message: '' });
@@ -32,7 +32,6 @@ const RoleLogin = () => {
   // OTP Refs
   const otpRefs = Array(6).fill(0).map(() => React.createRef());
 
-  // Show toast message
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
     setTimeout(() => {
@@ -40,7 +39,6 @@ const RoleLogin = () => {
     }, 3000);
   };
 
-  // Validate credentials form
   const validateCredentials = () => {
     const newErrors = {};
 
@@ -61,7 +59,6 @@ const RoleLogin = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Validate OTP
   const validateOtp = () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
@@ -71,7 +68,6 @@ const RoleLogin = () => {
     return true;
   };
 
-  // Handle credentials submission - Send OTP
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
 
@@ -96,7 +92,6 @@ const RoleLogin = () => {
         startOtpTimer();
         showToast('success', 'OTP sent to your email!');
         
-        // Focus first OTP input
         setTimeout(() => {
           otpRefs[0].current?.focus();
         }, 100);
@@ -112,7 +107,6 @@ const RoleLogin = () => {
     }
   };
 
-  // Handle OTP verification
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
 
@@ -135,15 +129,55 @@ const RoleLogin = () => {
       console.log('✅ Login response:', response);
 
       if (response.success && response.token) {
+        const { token, user } = response;
+        
+        console.log('🔑 Storing token and user data...');
+        
+        // Clear any existing data
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('roleToken');
+        localStorage.removeItem('roleUser');
+        localStorage.removeItem('userType');
+        
+        // Store role data with permissions array
+        localStorage.setItem('roleToken', token);
+        localStorage.setItem('roleUser', JSON.stringify({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          permissionsArray: user.permissionsArray || user.permissions || []
+        }));
+        localStorage.setItem('userType', 'role');
+        
+        console.log('✅ Token stored:', !!localStorage.getItem('roleToken'));
+        console.log('✅ User stored:', localStorage.getItem('roleUser'));
+        console.log('✅ Permissions Array:', user.permissionsArray || user.permissions);
+        
         showToast('success', response.message || 'Login successful!');
 
-        // Redirect to role dashboard
+        // ✅ Check if user has dashboard access (admin-dashboard permission)
+        const hasDashboardAccess = user.permissionsArray?.includes('admin-dashboard') || 
+                                   user.permissions?.includes('admin-dashboard') ||
+                                   user.role === 'admin';
+        
+        console.log('Has Dashboard Access:', hasDashboardAccess);
+        
+        // ✅ REDIRECT: Dashboard access hai to Admin Dashboard, nahi to Welcome Page
         setTimeout(() => {
-          navigate('/Role-dashboard');
-        }, 1500);
+          if (hasDashboardAccess) {
+            console.log('🚀 Redirecting to Admin Dashboard...');
+            window.location.href = '/Admin-Dashboard-overall';
+          } else {
+            console.log('🚀 No dashboard access, redirecting to Welcome Page...');
+            window.location.href = '/welcome';  // ✅ YEH CHANGE KARO (unauthorized ki jagah welcome)
+          }
+        }, 1000);
+        
       } else {
         showToast('error', response.message || 'Invalid OTP');
-        // Clear OTP fields
         setOtp(['', '', '', '', '', '']);
         otpRefs[0].current?.focus();
       }
@@ -151,8 +185,6 @@ const RoleLogin = () => {
     } catch (err) {
       console.error('❌ Login error:', err);
       showToast('error', err.message || 'Login failed. Please try again.');
-      
-      // Clear OTP fields on error
       setOtp(['', '', '', '', '', '']);
       otpRefs[0].current?.focus();
     } finally {
@@ -160,10 +192,8 @@ const RoleLogin = () => {
     }
   };
 
-  // Handle OTP input change
   const handleOtpChange = (index, value) => {
     if (value.length > 1) {
-      // If pasted value
       const pastedOtp = value.slice(0, 6).split('');
       const newOtp = [...otp];
       pastedOtp.forEach((digit, i) => {
@@ -171,19 +201,16 @@ const RoleLogin = () => {
       });
       setOtp(newOtp);
       
-      // Focus last filled field
       const lastFilledIndex = Math.min(pastedOtp.length, 5);
       if (lastFilledIndex < 6) {
         otpRefs[lastFilledIndex].current?.focus();
       }
     } else {
-      // Single digit input
       if (value.match(/^[0-9]$/) || value === '') {
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
 
-        // Auto-focus next input
         if (value !== '' && index < 5) {
           otpRefs[index + 1].current?.focus();
         }
@@ -191,7 +218,6 @@ const RoleLogin = () => {
     }
   };
 
-  // Handle OTP key down
   const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace') {
       if (otp[index] === '' && index > 0) {
@@ -200,7 +226,6 @@ const RoleLogin = () => {
     }
   };
 
-  // Handle OTP paste
   const handleOtpPaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
@@ -220,7 +245,6 @@ const RoleLogin = () => {
     }
   };
 
-  // Start OTP timer
   const startOtpTimer = () => {
     setOtpTimer(60);
     setCanResend(false);
@@ -237,7 +261,6 @@ const RoleLogin = () => {
     }, 1000);
   };
 
-  // Resend OTP
   const handleResendOtp = async () => {
     if (!canResend) return;
 
@@ -266,7 +289,6 @@ const RoleLogin = () => {
     }
   };
 
-  // Go back to credentials
   const goBackToCredentials = () => {
     setStep(1);
     setOtp(['', '', '', '', '', '']);
@@ -275,21 +297,18 @@ const RoleLogin = () => {
     setErrors({});
   };
 
-  // Toggle password visibility
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
   return (
     <div className="role-login-container">
-      {/* Decorative Background */}
       <div className="role-login-bg">
         <div className="role-bg-circle circle-11"></div>
         <div className="role-bg-circle circle-21"></div>
         <div className="role-bg-circle circle-31"></div>
       </div>
 
-      {/* Toast Message */}
       {toast.show && (
         <div className={`role-toast ${toast.type}`}>
           <div className="role-toast-content">
@@ -305,11 +324,8 @@ const RoleLogin = () => {
         </div>
       )}
 
-      {/* Main Content */}
       <div className="role-login-wrapper">
-        {/* Login Card */}
         <div className="role-login-card">
-          {/* Header */}
           <div className="role-login-header">
             <div className="role-icon-wrapper">
               <FaShieldAlt className="role-main-icon" />
@@ -317,12 +333,8 @@ const RoleLogin = () => {
             <h1>Role Login</h1>
           </div>
 
-        
-
-          {/* Step 1: Credentials Form */}
           {step === 1 && (
             <form onSubmit={handleCredentialsSubmit} className="role-login-form">
-              {/* Email Field */}
               <div className="role-form-group">
                 <label>
                   <FaEnvelope className="role-field-icon" />
@@ -342,7 +354,6 @@ const RoleLogin = () => {
                 {errors.email && <small className="role-error-text">{errors.email}</small>}
               </div>
 
-              {/* Password Field */}
               <div className="role-form-group">
                 <label>
                   <FaLock className="role-field-icon" />
@@ -370,12 +381,10 @@ const RoleLogin = () => {
                 {errors.password && <small className="role-error-text">{errors.password}</small>}
               </div>
 
-              {/* Forgot Password Link */}
               <div className="role-forgot-password">
                 <Link to="/forgot-password">Forgot Password?</Link>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 className="role-submit-btn"
@@ -393,12 +402,8 @@ const RoleLogin = () => {
             </form>
           )}
 
-          {/* Step 2: OTP Verification Form */}
           {step === 2 && (
             <form onSubmit={handleOtpSubmit} className="role-login-form">
-           
-
-              {/* OTP Input Fields */}
               <div className="role-form-group">
                 <label>
                   <FaKey className="role-field-icon" />
@@ -423,7 +428,6 @@ const RoleLogin = () => {
                 </div>
               </div>
 
-              {/* Timer and Resend */}
               <div className="role-otp-timer">
                 {otpTimer > 0 ? (
                   <p>
@@ -443,7 +447,6 @@ const RoleLogin = () => {
                 )}
               </div>
 
-              {/* Verify Button */}
               <button
                 type="submit"
                 className="role-submit-btn"
@@ -459,14 +462,19 @@ const RoleLogin = () => {
                 )}
               </button>
 
-              {/* Back Button */}
-
+              <button
+                type="button"
+                onClick={goBackToCredentials}
+                className="role-back-btn"
+                disabled={otpLoading}
+              >
+                <FaArrowLeft />
+                Back to Login
+              </button>
             </form>
           )}
 
-          {/* Footer */}
           <div className="role-login-footer">
-            
             <div className="role-security-badge">
               <FaShieldAlt />
               <span>Secured by OTP Verification</span>

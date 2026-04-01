@@ -1086,7 +1086,7 @@ export default function RoleAddcustomer() {
   const hasEstimatedAmounts = estimatedAmounts.low || estimatedAmounts.medium || estimatedAmounts.high;
 
   return (
-    <div className="main-container-Customer">
+    <div className="main-container-Customer ">
       <div className="sidebar-wrapper-Customer">
         <Sidebar />
       </div>

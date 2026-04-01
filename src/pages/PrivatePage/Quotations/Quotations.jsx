@@ -383,20 +383,20 @@ const AllQuotations = () => {
 
                     <td>
                       <div className="all-quotations-action-buttons">
-                        <button 
+                        {/* <button 
                           className="all-quotations-btn-icon all-quotations-view" 
                           onClick={() => handleView(quotation._id)}
                           title="View Quotation"
                         >
                           <FiEye />
-                        </button>
-                        <button 
+                        </button> */}
+                        {/* <button 
                           className="all-quotations-btn-icon all-quotations-edit" 
                           onClick={() => handleEdit(quotation._id)}
                           title="Edit Quotation"
                         >
                           <FiEdit2 />
-                        </button>
+                        </button> */}
                         <button 
                           className="all-quotations-btn-icon all-quotations-print" 
                           onClick={() => handlePrint(quotation._id)}

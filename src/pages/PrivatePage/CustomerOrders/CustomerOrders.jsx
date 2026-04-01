@@ -64,7 +64,8 @@ const CustomerOrders = () => {
     notes: ""
   });
   
-  // Payment form state
+  // Payment form state — paymentMethod enum matches backend schema:
+  // cash | bank_transfer | credit_card | debit_card | online
   const [paymentData, setPaymentData] = useState({
     amount: "",
     paymentMethod: "cash",
@@ -74,20 +75,37 @@ const CustomerOrders = () => {
   
   const [submitting, setSubmitting] = useState(false);
 
-  // Check if payment is complete
-  const isPaymentComplete = order?.remainingBalance <= 0;
+  // Check if payment is complete — based on backend paymentStatus field
+  const isPaymentComplete = order?.paymentStatus === 'paid';
 
   // Calculate totals
+  // advancePayment is tracked separately in order; payments[] are additional payments
   const totalCompletePayment = (order?.advancePayment || 0) + payments.reduce((sum, p) => sum + p.amount, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const profit = totalCompletePayment - totalExpenses;
 
-  // Status options
+  // Order status options — matches backend enum: pending | in-progress | completed
   const statusOptions = [
     { value: "pending", label: "Pending", icon: <MdPendingActions />, color: "#f59e0b" },
     { value: "in-progress", label: "In Progress", icon: <MdOutlineLocalShipping />, color: "#3b82f6" },
     { value: "completed", label: "Completed", icon: <FiCheckCircle />, color: "#10b981" }
   ];
+
+  // Payment method options — matches backend enum exactly
+  const paymentMethodOptions = [
+    { value: "cash", label: "Cash" },
+    { value: "bank_transfer", label: "Bank Transfer" },
+    { value: "credit_card", label: "Credit Card" },
+    { value: "debit_card", label: "Debit Card" },
+    { value: "online", label: "Online" }
+  ];
+
+  // paymentStatus badge config — matches backend enum: pending | partial | paid
+  const paymentStatusConfig = {
+    pending:  { label: "Pending",  color: "#f59e0b" },
+    partial:  { label: "Partial",  color: "#3b82f6" },
+    paid:     { label: "Paid",     color: "#10b981" }
+  };
 
   useEffect(() => {
     fetchOrderDetails();
@@ -233,7 +251,7 @@ const CustomerOrders = () => {
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
   };
 
-  // Handle Status Change
+  // Handle Status Change — updates order status (pending | in-progress | completed)
   const handleStatusChange = async (newStatus) => {
     try {
       setSubmitting(true);
@@ -368,6 +386,7 @@ const CustomerOrders = () => {
   };
 
   // Handle Add Payment
+  // Backend paymentSchema: { amount, paymentMethod (enum), date, notes }
   const handleAddPayment = async () => {
     const amount = parseFloat(paymentData.amount);
     if (!amount || amount <= 0) {
@@ -384,7 +403,7 @@ const CustomerOrders = () => {
       setSubmitting(true);
       
       const paymentPayload = {
-        order: order._id,
+        orderId: order._id,
         amount: amount,
         paymentMethod: paymentData.paymentMethod,
         date: paymentData.date,
@@ -399,7 +418,7 @@ const CustomerOrders = () => {
       
       showToast("Payment added successfully!", "success");
       
-      // Refresh order details and payments
+      // Refresh order (remainingBalance & paymentStatus updated by backend)
       fetchOrderDetails();
       fetchOrderPayments(order._id, false);
       
@@ -440,7 +459,7 @@ const CustomerOrders = () => {
       
       const paymentPayload = {
         amount: amount,
-        paymentMethod: paymentData.paymentMethod,
+        paymentMethod: paymentData.paymentMethod,  // cash | bank_transfer | credit_card | debit_card | online
         date: paymentData.date,
         notes: paymentData.notes || ""
       };
@@ -543,6 +562,37 @@ const CustomerOrders = () => {
     );
   };
 
+  // Payment status badge — uses backend paymentStatus: pending | partial | paid
+  const getPaymentStatusBadge = (paymentStatus) => {
+    const config = paymentStatusConfig[paymentStatus] || paymentStatusConfig.pending;
+    return (
+      <span
+        className="payment-status-badge-customer-orders"
+        style={{ backgroundColor: config.color + '20', color: config.color }}
+      >
+        {config.label}
+      </span>
+    );
+  };
+
+  // Get readable label for paymentMethod enum value
+  const getPaymentMethodLabel = (method) => {
+    const found = paymentMethodOptions.find(o => o.value === method);
+    return found ? found.label : (method?.toUpperCase() || 'CASH');
+  };
+
+  // Color for paymentMethod badge
+  const getPaymentMethodColor = (method) => {
+    const colors = {
+      cash:          { bg: '#10b98120', text: '#10b981' },
+      bank_transfer: { bg: '#8b5cf620', text: '#8b5cf6' },
+      credit_card:   { bg: '#3b82f620', text: '#3b82f6' },
+      debit_card:    { bg: '#6366f120', text: '#6366f1' },
+      online:        { bg: '#f59e0b20', text: '#f59e0b' }
+    };
+    return colors[method] || { bg: '#6b728020', text: '#6b7280' };
+  };
+
   const getCategoryColor = (category) => {
     const colors = {
       material: "#3b82f6",
@@ -552,10 +602,6 @@ const CustomerOrders = () => {
       miscellaneous: "#6b7280"
     };
     return colors[category] || "#6b7280";
-  };
-
-  const calculateItemTotal = (item) => {
-    return (item.quantity || 1) * (item.unitPrice || 0);
   };
 
   // Format profit with sign
@@ -570,7 +616,7 @@ const CustomerOrders = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="main-container-customer-orders">
+      <div className="main-container-customer-orders sideber-container-Mobile">
         <Sidebar />
         <div className="content-wrapper-customer-orders loading-container-customer-orders">
           <div className="loading-spinner-customer-orders">
@@ -634,10 +680,10 @@ const CustomerOrders = () => {
               }}
             >
               <FiPlus className="btn-icon-customer-orders" />
-              Add Expense
+              Add Material cost
             </button>
             
-            {/* Payment Button - Conditional Rendering */}
+            {/* Payment Button — hidden when paymentStatus is 'paid' */}
             {isPaymentComplete ? (
               <div className="payment-complete-badge">
                 <FiCheckCircle className="btn-icon-customer-orders" />
@@ -669,9 +715,13 @@ const CustomerOrders = () => {
               <p><FiPhone className="info-icon-customer-orders" /> {customer?.phone || order.customer?.phone || 'N/A'}</p>
               <p><FiMapPin className="info-icon-customer-orders" /> {customer?.address || order.customer?.address || 'N/A'}</p>
             </div>
+            {/* Payment Status Badge */}
+            <div className="payment-status-row-customer-orders">
+              {getPaymentStatusBadge(order.paymentStatus)}
+            </div>
           </div>
           
-          {/* Status Dropdown */}
+          {/* Order Status Dropdown — enum: pending | in-progress | completed */}
           <div className="order-status-dropdown">
             <div 
               className="status-selector"
@@ -722,7 +772,7 @@ const CustomerOrders = () => {
             </div>
           </div>
 
-          {/* Conditional Cards based on Payment Complete */}
+          {/* Conditional Cards based on paymentStatus === 'paid' */}
           {isPaymentComplete ? (
             <>
               {/* Total Complete Payment Card */}
@@ -784,7 +834,7 @@ const CustomerOrders = () => {
                 </div>
                 <div className="card-content-customer-orders">
                   <span className="card-label-customer-orders">Remaining</span>
-                  <span className="card-value-customer-orders">{formatCurrency(order.remainingBalance || order.finalTotal)}</span>
+                  <span className="card-value-customer-orders">{formatCurrency(order.remainingBalance ?? order.finalTotal)}</span>
                 </div>
               </div>
 
@@ -802,7 +852,7 @@ const CustomerOrders = () => {
           )}
         </div>
 
-        {/* ✅ ORDER ITEMS SECTION (JOBS) - From Order Items Array */}
+        {/* ORDER ITEMS SECTION — from order.items[] (itemName, quantity, unitPrice, totalPrice, notes) */}
         <div className="jobs-section-customer-orders">
           <div className="section-header-customer-orders">
             <h3>
@@ -979,59 +1029,58 @@ const CustomerOrders = () => {
             </div>
           ) : (
             <div className="payments-list-customer-orders">
-              {payments.map((payment) => (
-                <div key={payment._id} className="payment-card-customer-orders">
-                  <div className="payment-card-header">
-                    <div className="payment-title">
-                      <span className="payment-method-badge" style={{
-                        backgroundColor: payment.paymentMethod === 'cash' ? '#10b98120' : 
-                                       payment.paymentMethod === 'card' ? '#3b82f620' : 
-                                       payment.paymentMethod === 'bank' ? '#8b5cf620' : '#f59e0b20',
-                        color: payment.paymentMethod === 'cash' ? '#10b981' : 
-                               payment.paymentMethod === 'card' ? '#3b82f6' : 
-                               payment.paymentMethod === 'bank' ? '#8b5cf6' : '#f59e0b'
-                      }}>
-                        {payment.paymentMethod?.toUpperCase() || 'CASH'}
-                      </span>
+              {payments.map((payment) => {
+                const methodColor = getPaymentMethodColor(payment.paymentMethod);
+                return (
+                  <div key={payment._id} className="payment-card-customer-orders">
+                    <div className="payment-card-header">
+                      <div className="payment-title">
+                        <span
+                          className="payment-method-badge"
+                          style={{ backgroundColor: methodColor.bg, color: methodColor.text }}
+                        >
+                          {getPaymentMethodLabel(payment.paymentMethod)}
+                        </span>
+                      </div>
+                      <div className="payment-actions">
+                        <button 
+                          className="edit-btn-customer-orders"
+                          onClick={() => handleEditPayment(payment)}
+                          title="Edit Payment"
+                          disabled={isPaymentComplete}
+                        >
+                          <FiEdit2 />
+                        </button>
+                        <button 
+                          className="delete-btn-customer-orders"
+                          onClick={() => handleDeletePayment(payment._id)}
+                          title="Delete Payment"
+                          disabled={isPaymentComplete}
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
                     </div>
-                    <div className="payment-actions">
-                      <button 
-                        className="edit-btn-customer-orders"
-                        onClick={() => handleEditPayment(payment)}
-                        title="Edit Payment"
-                        disabled={isPaymentComplete}
-                      >
-                        <FiEdit2 />
-                      </button>
-                      <button 
-                        className="delete-btn-customer-orders"
-                        onClick={() => handleDeletePayment(payment._id)}
-                        title="Delete Payment"
-                        disabled={isPaymentComplete}
-                      >
-                        <FiTrash2 />
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="payment-card-body">
-                    <div className="payment-amount">
-                      <BsCurrencyRupee />
-                      <span>{formatCurrency(payment.amount)}</span>
+                    <div className="payment-card-body">
+                      <div className="payment-amount">
+                        <BsCurrencyRupee />
+                        <span>{formatCurrency(payment.amount)}</span>
+                      </div>
+                      <div className="payment-date">
+                        <FiClock />
+                        <span>{formatDate(payment.date)}</span>
+                      </div>
                     </div>
-                    <div className="payment-date">
-                      <FiClock />
-                      <span>{formatDate(payment.date)}</span>
-                    </div>
-                  </div>
 
-                  {payment.notes && (
-                    <div className="payment-notes">
-                      <p>{payment.notes}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {payment.notes && (
+                      <div className="payment-notes">
+                        <p>{payment.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               
               {/* Show completion message if all payments are done */}
               {isPaymentComplete && (
@@ -1225,14 +1274,13 @@ const CustomerOrders = () => {
                   <div className="info-row-customer-orders total-row">
                     <span>Remaining Balance:</span>
                     <span className="amount-customer-orders remaining">
-                      {formatCurrency(order.remainingBalance || order.finalTotal)}
+                      {formatCurrency(order.remainingBalance ?? order.finalTotal)}
                     </span>
                   </div>
-                  
                   <div className="info-row-customer-orders max-payment-row">
                     <span>Maximum Payment:</span>
                     <span className="amount-customer-orders max-payment">
-                      {formatCurrency(order.remainingBalance || order.finalTotal)}
+                      {formatCurrency(order.remainingBalance ?? order.finalTotal)}
                     </span>
                   </div>
                 </div>
@@ -1248,12 +1296,12 @@ const CustomerOrders = () => {
                     onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
                     placeholder={`Enter payment amount (Max: ${formatCurrency(order.remainingBalance)})`}
                     min="0"
-                    max={order.remainingBalance || order.finalTotal}
+                    max={order.remainingBalance ?? order.finalTotal}
                     step="0.01"
                     className="form-input-customer-orders"
                   />
                   <small className="input-hint">
-                    Maximum allowed: {formatCurrency(order.remainingBalance || order.finalTotal)}
+                    Maximum allowed: {formatCurrency(order.remainingBalance ?? order.finalTotal)}
                   </small>
                 </div>
 
@@ -1263,15 +1311,17 @@ const CustomerOrders = () => {
                       <FiCreditCard className="input-icon-customer-orders" />
                       Payment Method
                     </label>
+                    {/* Options match backend enum: cash | bank_transfer | credit_card | debit_card | online */}
                     <select
                       value={paymentData.paymentMethod}
                       onChange={(e) => setPaymentData({...paymentData, paymentMethod: e.target.value})}
                       className="form-select-customer-orders"
                     >
                       <option value="cash">Cash</option>
-                      <option value="card">Card</option>
-                      <option value="bank">Bank Transfer</option>
-                      <option value="cheque">Cheque</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="credit_card">Credit Card</option>
+                      <option value="debit_card">Debit Card</option>
+                      <option value="online">Online</option>
                     </select>
                   </div>
 
