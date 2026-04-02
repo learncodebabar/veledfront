@@ -492,7 +492,7 @@ const getImageUrl = (imageUrl) => {
   }
   
   // Backend URL - jo browser mein kaam kar raha hai
-  const baseUrl = 'http://localhost:5000' ||  import.meta.env.VITE_API_URL;
+  const baseUrl = import.meta.env.VITE_API_URL;
   
   // Image ka full URL banao
   let cleanUrl = imageUrl;
@@ -750,7 +750,7 @@ const PrintQuotation = () => {
   };
 
   const handleDownloadPDF = () => { 
-    const base =  'http://localhost:5000' ||  import.meta.env.VITE_API_URL;
+    const base =   import.meta.env.VITE_API_URL;
     const mode = showCost ? 'with-cost' : 'without-cost';
     window.open(`${base}/api/quotations/print/${id}/${mode}`, '_blank');
   };
