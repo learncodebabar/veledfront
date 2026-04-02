@@ -567,14 +567,7 @@ function App() {
               />
 
               {/* ✅ ROLE PRINT QUOTATION ROUTE */}
-              <Route
-                path="/role-quotations/print/:id"
-                element={
-                  <RolePrivateRoute allowedRoles={['admin', 'manager', 'supervisor']}>
-                    <PrintQuotation />
-                  </RolePrivateRoute>
-                }
-              />
+           
 
               {/* ==================== CATCH ALL ROUTE ==================== */}
               <Route path="*" element={<Navigate to="/404" replace />} />
