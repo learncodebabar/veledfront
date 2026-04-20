@@ -11,7 +11,6 @@ import {
   FaEyeSlash,
   FaShieldAlt,
   FaUserCircle,
-  FaArrowLeft,
   FaCheckCircle,
   FaExclamationCircle,
   FaSpinner
@@ -24,12 +23,6 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
-  // States for OTP - 6 digits
-  const [step, setStep] = useState("login"); // 'login' or 'otp'
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]); // 6-digit OTP
-  const [timer, setTimer] = useState(0);
-  const [canResend, setCanResend] = useState(true);
   
   // UI States
   const [loading, setLoading] = useState(false);
@@ -48,23 +41,7 @@ export default function AdminLogin() {
     }, 5000);
   };
 
-  // Start resend timer
-  const startResendTimer = () => {
-    setCanResend(false);
-    setTimer(60);
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setCanResend(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  // Login handler - Step 1: Send OTP
+  // Login handler - Direct login without OTP
   const handleLogin = async (e) => {
     e.preventDefault();
     
@@ -76,85 +53,7 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const res = await API.post("/admin/login-with-otp", { email, password });
-      
-      if (res.data.requiresOTP) {
-        setStep("otp");
-        startResendTimer();
-        showToastMessage("6-digit verification code sent to your email!", "success");
-        
-        // Focus on first OTP input
-        setTimeout(() => {
-          const firstInput = document.getElementById("otp-0");
-          if (firstInput) firstInput.focus();
-        }, 100);
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Invalid email or password";
-      showToastMessage(errorMessage, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle OTP input change for 6 digits
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return; // Only single digit
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
-  // Handle OTP keydown (backspace)
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-${index - 1}`);
-      if (prevInput) prevInput.focus();
-    }
-  };
-
-  // Handle OTP paste for 6 digits
-  const handleOtpPaste = (e) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    const newOtp = [...otp];
-    
-    for (let i = 0; i < pastedData.length; i++) {
-      newOtp[i] = pastedData[i];
-    }
-    
-    setOtp(newOtp);
-    
-    // Focus the next empty input or last input
-    const nextIndex = Math.min(pastedData.length, 5);
-    const nextInput = document.getElementById(`otp-${nextIndex}`);
-    if (nextInput) nextInput.focus();
-  };
-
-  // Verify OTP handler - Step 2: Verify 6-digit OTP
-  const handleVerifyOTP = async (e) => {
-    e.preventDefault();
-    
-    const otpString = otp.join("");
-    if (otpString.length !== 6) {
-      showToastMessage("Please enter complete 6-digit code", "error");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await API.post("/admin/verify-login-otp", { 
-        email, 
-        otp: otpString 
-      });
+      const res = await API.post("/admin/login", { email, password });
       
       // Store token and user data
       localStorage.setItem("adminToken", res.data.token);
@@ -166,48 +65,11 @@ export default function AdminLogin() {
         navigate("/Admin-Dashboard-overall");
       }, 1500);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Invalid verification code";
+      const errorMessage = err.response?.data?.message || "Invalid email or password";
       showToastMessage(errorMessage, "error");
-      
-      // Clear OTP inputs on error
-      setOtp(["", "", "", "", "", ""]);
-      
-      // Focus first input
-      const firstInput = document.getElementById("otp-0");
-      if (firstInput) firstInput.focus();
     } finally {
       setLoading(false);
     }
-  };
-
-  // Resend OTP handler
-  const handleResendOTP = async () => {
-    if (!canResend) return;
-
-    setLoading(true);
-    try {
-      await API.post("/admin/resend-login-otp", { email });
-      showToastMessage("New 6-digit verification code sent to your email!", "success");
-      startResendTimer();
-      
-      // Clear OTP inputs
-      setOtp(["", "", "", "", "", ""]);
-      
-      // Focus first input
-      const firstInput = document.getElementById("otp-0");
-      if (firstInput) firstInput.focus();
-    } catch (err) {
-      showToastMessage("Failed to resend code. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Go back to login
-  const handleBackToLogin = () => {
-    setStep("login");
-    setOtp(["", "", "", "", "", ""]);
-    setPassword("");
   };
 
   return (
@@ -240,142 +102,68 @@ export default function AdminLogin() {
         <div className="card-shape shape-1"></div>
         <div className="card-shape shape-2"></div>
         
-        {step === "login" ? (
-          /* Login Form */
-          <>
-            <div className="login-header">
-              <div className="login-icon-wrapper">
-                <FaUserCircle className="login-main-icon" />
-              </div>
-              <h1 className="login-title">Admin Login</h1>
-              <p className="login-subtitle">Welcome back! Please login to your account</p>
-            </div>
+        {/* Login Form */}
+        <div className="login-header">
+          <div className="login-icon-wrapper">
+            <FaUserCircle className="login-main-icon" />
+          </div>
+          <h1 className="login-title">Admin Login</h1>
+          <p className="login-subtitle">Welcome back! Please login to your account</p>
+        </div>
 
-            <form onSubmit={handleLogin} className="admin-login-form">
-              <div className="form-group">
-                <label htmlFor="email">
-                  <FaEnvelope className="input-icon" /> Email Address <span className="required">*</span>
-                </label>
-                <div className="input-wrapper">
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="admin@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                    className={toast.show && toast.type === 'error' ? 'error' : ''}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="password">
-                  <FaLock className="input-icon" /> Password <span className="required">*</span>
-                </label>
-                <div className="password-wrapper">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    className={toast.show && toast.type === 'error' ? 'error' : ''}
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
+        <form onSubmit={handleLogin} className="admin-login-form">
+          <div className="form-group">
+            <label htmlFor="email">
+              <FaEnvelope className="input-icon" /> Email Address <span className="required">*</span>
+            </label>
+            <div className="input-wrapper">
+              <input
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 disabled={loading}
-                className={`submit-btn ${loading ? 'loading' : ''}`}
-              >
-                {loading ? <><FaSpinner className="spinning" /> Authenticating...</> : 'Login to Dashboard'}
-              </button>
-            </form>
-          </>
-        ) : (
-          /* OTP Verification Form - 6 Digits */
-          <>
-            <div className="login-header">
-              <div className="login-icon-wrapper">
-                <FaShieldAlt className="login-main-icon" />
-              </div>
-              <h1 className="login-title">Verification Code</h1>
-              <p className="login-subtitle">
-                Enter the 6-digit code sent to<br />
-                <strong>{email}</strong>
-              </p>
+                className={toast.show && toast.type === 'error' ? 'error' : ''}
+              />
             </div>
+          </div>
 
-            <form onSubmit={handleVerifyOTP} className="otp-form">
-              <div className="otp-input-group">
-                {otp.map((digit, index) => (
-                  <input
-                    key={index}
-                    id={`otp-${index}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="\d*"
-                    maxLength="1"
-                    value={digit}
-                    onChange={(e) => handleOtpChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    onPaste={index === 0 ? handleOtpPaste : undefined}
-                    className="otp-input"
-                    autoFocus={index === 0}
-                    disabled={loading}
-                  />
-                ))}
-              </div>
-
-              <div className="otp-timer">
-                {!canResend ? (
-                  <span className="timer-text">
-                    <FaShieldAlt /> Resend code in <strong>{timer}s</strong>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    className="resend-btn"
-                    disabled={loading}
-                  >
-                    <FaShieldAlt /> Resend Code
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otp.join("").length !== 6}
-                className={`submit-btn ${loading ? 'loading' : ''}`}
-              >
-                {loading ? <><FaSpinner className="spinning" /> Verifying...</> : 'Verify & Login'}
-              </button>
-
+          <div className="form-group">
+            <label htmlFor="password">
+              <FaLock className="input-icon" /> Password <span className="required">*</span>
+            </label>
+            <div className="password-wrapper">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className={toast.show && toast.type === 'error' ? 'error' : ''}
+              />
               <button
                 type="button"
-                onClick={handleBackToLogin}
-                className="back-btn"
-                disabled={loading}
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                <FaArrowLeft /> Back to Login
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
-            </form>
-          </>
-        )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`submit-btn ${loading ? 'loading' : ''}`}
+          >
+            {loading ? <><FaSpinner className="spinning" /> Logging in...</> : 'Login to Dashboard'}
+          </button>
+        </form>
 
         <div className="login-footer">
           <p className="register-link">

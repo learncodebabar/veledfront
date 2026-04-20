@@ -701,7 +701,7 @@ const getImageUrl = (imageUrl) => {
   }
   
   // Get base URL from API instance or environment
-  const baseUrl = API.defaults.baseURL || import.meta.env.VITE_API_URL  ;
+  const baseUrl = API.defaults.baseURL || import.meta.env.VITE_API_URL || 'http://localhost:5000';
   
   // Clean the URL - remove /api from base if it exists
   const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
